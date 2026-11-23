@@ -6,7 +6,7 @@ public interface IOverlayRenderer : IDisposable
 
     void Resize(Size size);
 
-    void Render(Drawing.InkCanvas canvas);
+    void Render(Drawing.InkCanvas canvas, OverlayHud hud);
 
     void Present();
 }

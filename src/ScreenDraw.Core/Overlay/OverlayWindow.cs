@@ -1,3 +1,4 @@
+using ScreenDraw.Core.Diagnostics;
 using ScreenDraw.Core.Drawing;
 using ScreenDraw.Core.Interop;
 using ScreenDraw.Core.Rendering;
@@ -7,13 +8,21 @@ namespace ScreenDraw.Core.Overlay;
 public sealed class OverlayWindow : NativeWindowBase
 {
     private const string ClassName = "ScreenDrawOverlayWindow";
-    private static readonly nint TopMostTimerId = 1;
+    private const string Hint = "Armed  ·  left drag to ink  ·  Esc to finish";
     private const uint TopMostInterval = 500;
-    private const WindowExStyle Styles = WindowExStyle.Layered | WindowExStyle.TopMost | WindowExStyle.ToolWindow | WindowExStyle.NoActivate;
+    private const uint HintDuration = 2500;
+
+    private static readonly nint TopMostTimerId = 1;
+    private static readonly nint HintTimerId = 2;
+
+    private static readonly WindowExStyle Styles =
+        WindowExStyle.Layered | WindowExStyle.TopMost | WindowExStyle.ToolWindow | WindowExStyle.NoActivate;
 
     private readonly InkCanvas _canvas;
     private readonly GdiOverlayRenderer _renderer;
     private bool _drawing;
+    private bool _hintVisible;
+    private bool _loggedFirstStroke;
 
     public OverlayWindow(Rectangle bounds, InkCanvas canvas)
         : this(bounds, canvas, show: true)
@@ -32,13 +41,17 @@ public sealed class OverlayWindow : NativeWindowBase
         _canvas = canvas;
         _renderer = new GdiOverlayRenderer(Handle);
         _renderer.Resize(bounds.Size);
+        _hintVisible = show;
         Render();
-        NativeMethods.SetTimer(Handle, TopMostTimerId, TopMostInterval, 0);
 
+        NativeMethods.SetTimer(Handle, TopMostTimerId, TopMostInterval, 0);
         if (show)
         {
+            NativeMethods.SetTimer(Handle, HintTimerId, HintDuration, 0);
             NativeMethods.ShowWindow(Handle, NativeMethods.SwShowNoActivate);
         }
+
+        Log.Write($"overlay: created hwnd=0x{Handle:X} rect={bounds.X},{bounds.Y} {bounds.Width}x{bounds.Height} shown={show}");
     }
 
     internal GdiOverlayRenderer Renderer => _renderer;
@@ -49,11 +62,25 @@ public sealed class OverlayWindow : NativeWindowBase
 
     public override void Dispose()
     {
+        Log.Write($"overlay: disposing hwnd=0x{Handle:X}");
         _renderer.Dispose();
         base.Dispose();
     }
 
     protected override nint WindowProc(nint hwnd, uint message, nint wParam, nint lParam)
+    {
+        try
+        {
+            return HandleMessage(hwnd, message, wParam, lParam);
+        }
+        catch (Exception ex)
+        {
+            Log.Error($"overlay message 0x{message:X}", ex);
+            return 0;
+        }
+    }
+
+    private nint HandleMessage(nint hwnd, uint message, nint wParam, nint lParam)
     {
         switch (message)
         {
@@ -95,16 +122,19 @@ public sealed class OverlayWindow : NativeWindowBase
                 _canvas.Width += WheelDelta(wParam) > 0 ? 1f : -1f;
                 return 0;
 
-            case WindowsMessages.Timer:
-                if (wParam == TopMostTimerId)
-                {
-                    ReassertTopMost();
-                }
+            case WindowsMessages.Timer when wParam == TopMostTimerId:
+                ReassertTopMost();
+                return 0;
 
+            case WindowsMessages.Timer when wParam == HintTimerId:
+                _hintVisible = false;
+                NativeMethods.KillTimer(hwnd, HintTimerId);
+                Render();
                 return 0;
 
             case WindowsMessages.Destroy:
                 NativeMethods.KillTimer(hwnd, TopMostTimerId);
+                NativeMethods.KillTimer(hwnd, HintTimerId);
                 return 0;
         }
 
@@ -119,14 +149,22 @@ public sealed class OverlayWindow : NativeWindowBase
         }
 
         _drawing = false;
+        var points = _canvas.Active?.Points.Count ?? 0;
         _canvas.EndStroke();
         NativeMethods.ReleaseCapture();
+
+        if (!_loggedFirstStroke)
+        {
+            _loggedFirstStroke = true;
+            Log.Write($"ink: first stroke received, {points} point(s)");
+        }
+
         Render();
     }
 
     private void Render()
     {
-        _renderer.Render(_canvas);
+        _renderer.Render(_canvas, new OverlayHud(Border: true, Hint: _hintVisible ? Hint : null));
         _renderer.Present();
     }
 

@@ -3,11 +3,12 @@ using ScreenDraw.Core.Interop;
 
 namespace ScreenDraw.Core.Overlay;
 
-internal readonly record struct WindowTarget(nint Handle, Rectangle Bounds, string Title)
+public readonly record struct WindowTarget(nint Handle, Rectangle Bounds, string Title)
 {
-    public static WindowTarget? Foreground()
+    public static WindowTarget? Foreground() => FromHandle(NativeMethods.GetForegroundWindow());
+
+    public static WindowTarget? FromHandle(nint hwnd)
     {
-        var hwnd = NativeMethods.GetForegroundWindow();
         if (hwnd == 0)
         {
             return null;

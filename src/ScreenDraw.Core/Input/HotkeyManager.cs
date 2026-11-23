@@ -1,5 +1,6 @@
 using System.ComponentModel;
 using System.Runtime.InteropServices;
+using ScreenDraw.Core.Diagnostics;
 using ScreenDraw.Core.Interop;
 
 namespace ScreenDraw.Core.Input;
@@ -17,16 +18,24 @@ public sealed class HotkeyManager : IDisposable
         _window = new HotkeysWindow(OnHotkey);
     }
 
-    public int Register(HotkeyModifiers modifiers, VirtualKey key, Action callback)
+    public bool TryRegister(
+        HotkeyModifiers modifiers,
+        VirtualKey key,
+        Action callback,
+        out int id,
+        out string? error)
     {
-        var id = _nextId++;
+        id = _nextId++;
+        error = null;
+
         if (NativeMethods.RegisterHotKey(_window.Handle, id, (uint)modifiers | NativeMethods.ModNoRepeat, (uint)key) == 0)
         {
-            throw new Win32Exception(Marshal.GetLastWin32Error(), "That hotkey is already in use by another program.");
+            error = new Win32Exception(Marshal.GetLastWin32Error()).Message;
+            return false;
         }
 
         _callbacks[id] = callback;
-        return id;
+        return true;
     }
 
     public void Unregister(int id)
@@ -48,6 +57,7 @@ public sealed class HotkeyManager : IDisposable
 
     private void OnHotkey(int id)
     {
+        Log.Write($"hotkey: id {id} fired");
         if (_callbacks.TryGetValue(id, out var callback))
         {
             callback();

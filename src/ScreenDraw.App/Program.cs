@@ -1,3 +1,4 @@
+using System.Runtime.InteropServices;
 using ScreenDraw.Core.Diagnostics;
 
 namespace ScreenDraw.App;
@@ -9,6 +10,9 @@ internal static class Program
     [STAThread]
     private static int Main(string[] args)
     {
+        var version = typeof(Program).Assembly.GetName().Version?.ToString(3) ?? "0.0.0";
+        Log.Write($"---- Screen Draw {version} | {RuntimeInformation.OSDescription} | {RuntimeInformation.ProcessArchitecture} | pid {Environment.ProcessId} ----");
+
         if (HasFlag(args, "--self-test"))
         {
             return RunSelfTest();
@@ -48,7 +52,5 @@ internal static class Program
         ConsoleBridge.AttachToParent();
         Console.WriteLine(File.ReadAllText(path));
         return exitCode;
-    }
-
-    private static bool HasFlag(string[] args, string flag) => args.Contains(flag, StringComparer.OrdinalIgnoreCase);
+    }    private static bool HasFlag(string[] args, string flag) => args.Contains(flag, StringComparer.OrdinalIgnoreCase);
 }

@@ -11,6 +11,11 @@ public sealed class GdiOverlayRenderer : IOverlayRenderer
 {
     private const float HaloPadding = 4f;
 
+    // Transparent pixels of a layered window are click-through, so the frame keeps an alpha floor of 1.
+    private const byte HitTestAlpha = 1;
+
+    private static readonly Font HudFont = new("Segoe UI", 9f, FontStyle.Regular, GraphicsUnit.Point);
+
     private readonly nint _hwnd;
     private nint _memoryDc;
     private nint _dib;
@@ -77,7 +82,7 @@ public sealed class GdiOverlayRenderer : IOverlayRenderer
         }
     }
 
-    public void Render(InkCanvas canvas)
+    public void Render(InkCanvas canvas, OverlayHud hud)
     {
         var frame = _frame ?? throw new InvalidOperationException("Resize must be called before rendering.");
         var committed = _committed!;
@@ -96,11 +101,22 @@ public sealed class GdiOverlayRenderer : IOverlayRenderer
 
         using var graphics = Graphics.FromImage(frame);
         graphics.Clear(Color.Transparent);
+        FillHitTestBackground(graphics, frame.Size);
         graphics.DrawImageUnscaled(committed, 0, 0);
         if (canvas.Active is { } active)
         {
             DrawStroke(graphics, active);
         }
+
+        DrawHud(graphics, hud);
+    }
+
+    private static void FillHitTestBackground(Graphics graphics, Size size)
+    {
+        graphics.CompositingMode = CompositingMode.SourceCopy;
+        using var brush = new SolidBrush(Color.FromArgb(HitTestAlpha, 0, 0, 0));
+        graphics.FillRectangle(brush, 0, 0, size.Width, size.Height);
+        graphics.CompositingMode = CompositingMode.SourceOver;
     }
 
     public void Present()
@@ -139,6 +155,46 @@ public sealed class GdiOverlayRenderer : IOverlayRenderer
         GC.SuppressFinalize(this);
     }
 
+    private static void DrawHud(Graphics graphics, OverlayHud hud)
+    {
+        if (hud.Border && graphics.VisibleClipBounds is { Width: > 0, Height: > 0 } bounds)
+        {
+            using var pen = new Pen(Color.FromArgb(120, 255, 214, 64), 1f);
+            graphics.DrawRectangle(pen, 0.5f, 0.5f, bounds.Width - 1.5f, bounds.Height - 1.5f);
+        }
+
+        if (string.IsNullOrEmpty(hud.Hint))
+        {
+            return;
+        }
+
+        graphics.SmoothingMode = SmoothingMode.AntiAlias;
+        graphics.TextRenderingHint = System.Drawing.Text.TextRenderingHint.ClearTypeGridFit;
+
+        var textSize = graphics.MeasureString(hud.Hint, HudFont);
+        var pill = new RectangleF(16f, 16f, textSize.Width + 24f, textSize.Height + 12f);
+        using (var back = new SolidBrush(Color.FromArgb(214, 18, 20, 26)))
+        using (var rounded = RoundedRectangle(pill, 7f))
+        {
+            graphics.FillPath(back, rounded);
+        }
+
+        using var text = new SolidBrush(Color.FromArgb(255, 236, 240, 250));
+        graphics.DrawString(hud.Hint, HudFont, text, pill.X + 12f, pill.Y + 6f);
+    }
+
+    private static GraphicsPath RoundedRectangle(RectangleF rectangle, float radius)
+    {
+        var path = new GraphicsPath();
+        var diameter = radius * 2f;
+        path.AddArc(rectangle.Left, rectangle.Top, diameter, diameter, 180f, 90f);
+        path.AddArc(rectangle.Right - diameter, rectangle.Top, diameter, diameter, 270f, 90f);
+        path.AddArc(rectangle.Right - diameter, rectangle.Bottom - diameter, diameter, diameter, 0f, 90f);
+        path.AddArc(rectangle.Left, rectangle.Bottom - diameter, diameter, diameter, 90f, 90f);
+        path.CloseFigure();
+        return path;
+    }
+
     private static void DrawStroke(Graphics graphics, Stroke stroke)
     {
         if (stroke.Points.Count == 0)
@@ -152,7 +208,7 @@ public sealed class GdiOverlayRenderer : IOverlayRenderer
         if (stroke.IsEraser)
         {
             graphics.CompositingMode = CompositingMode.SourceCopy;
-            using var eraser = new Pen(Color.Transparent, stroke.Width + HaloPadding);
+            using var eraser = new Pen(Color.FromArgb(HitTestAlpha, 0, 0, 0), stroke.Width + HaloPadding);
             ConfigureInk(eraser);
             DrawSegments(graphics, eraser, points);
             graphics.CompositingMode = CompositingMode.SourceOver;

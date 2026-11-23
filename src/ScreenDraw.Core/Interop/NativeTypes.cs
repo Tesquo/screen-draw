@@ -143,3 +143,53 @@ internal struct BitmapInfo
 }
 
 internal delegate nint WindowProcedure(nint hwnd, uint message, nint wParam, nint lParam);
+
+[StructLayout(LayoutKind.Sequential)]
+internal struct Msg
+{
+    public nint Window;
+    public uint Message;
+    public nint WParam;
+    public nint LParam;
+    public uint Time;
+    public Point32 Point;
+    public uint Private;
+}
+
+[StructLayout(LayoutKind.Sequential)]
+internal struct InputEvent
+{
+    public uint Type;
+    public InputUnion Union;
+}
+
+[StructLayout(LayoutKind.Explicit)]
+internal struct InputUnion
+{
+    [FieldOffset(0)]
+    public MouseInput Mouse;
+
+    [FieldOffset(0)]
+    public KeyboardInput Keyboard;
+}
+
+[StructLayout(LayoutKind.Sequential)]
+internal struct KeyboardInput
+{
+    public ushort VirtualKey;
+    public ushort ScanCode;
+    public uint Flags;
+    public uint Time;
+    public nint ExtraInfo;
+}
+
+[StructLayout(LayoutKind.Sequential)]
+internal struct MouseInput
+{
+    public int X;
+    public int Y;
+    public uint MouseData;
+    public uint Flags;
+    public uint Time;
+    public nint ExtraInfo;
+}
