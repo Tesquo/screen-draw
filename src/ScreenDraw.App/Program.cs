@@ -18,6 +18,11 @@ internal static class Program
             return RunSelfTest();
         }
 
+        if (HasFlag(args, "--bench"))
+        {
+            return RunBenchmark(args);
+        }
+
         using var mutex = new Mutex(true, MutexName, out var isFirstInstance);
         if (!isFirstInstance)
         {
@@ -41,16 +46,71 @@ internal static class Program
     private static int RunSelfTest()
     {
         var path = Path.Combine(Path.GetTempPath(), "screendraw-selftest.txt");
-        int exitCode;
 
-        using (var log = new StreamWriter(path))
+        try
         {
-            exitCode = SelfTest.Run(log);
-            log.WriteLine($"RESULT: {(exitCode == 0 ? "PASS" : "FAIL")}  ({path})");
+            int exitCode;
+            using (var log = new StreamWriter(path))
+            {
+                exitCode = SelfTest.Run(log);
+                log.WriteLine($"RESULT: {(exitCode == 0 ? "PASS" : "FAIL")}  ({path})");
+            }
+
+            ConsoleBridge.AttachToParent();
+            Console.WriteLine(File.ReadAllText(path));
+            return exitCode;
+        }
+        catch (Exception ex)
+        {
+            return Fail(path, ex);
+        }
+    }
+
+    private static int RunBenchmark(string[] args)
+    {
+        var size = new Size(2560, 1440);
+        foreach (var argument in args)
+        {
+            var parts = argument.Split('x');
+            if (parts.Length == 2 && int.TryParse(parts[0], out var width) && int.TryParse(parts[1], out var height))
+            {
+                size = new Size(width, height);
+            }
+        }
+
+        var path = Path.Combine(Path.GetTempPath(), "screendraw-bench.txt");
+
+        try
+        {
+            using (var log = new StreamWriter(path))
+            {
+                Benchmark.Run(log, size, 200);
+            }
+
+            ConsoleBridge.AttachToParent();
+            Console.WriteLine(File.ReadAllText(path));
+            return 0;
+        }
+        catch (Exception ex)
+        {
+            return Fail(path, ex);
+        }
+    }
+
+    private static int Fail(string path, Exception exception)
+    {
+        try
+        {
+            File.WriteAllText(path, exception.ToString());
+        }
+        catch (IOException)
+        {
         }
 
         ConsoleBridge.AttachToParent();
-        Console.WriteLine(File.ReadAllText(path));
-        return exitCode;
-    }    private static bool HasFlag(string[] args, string flag) => args.Contains(flag, StringComparer.OrdinalIgnoreCase);
+        Console.WriteLine(exception);
+        return 1;
+    }
+
+    private static bool HasFlag(string[] args, string flag) => args.Contains(flag, StringComparer.OrdinalIgnoreCase);
 }

@@ -52,6 +52,7 @@ The app lives in the system tray. Closing the settings window hides it; use the 
 | Flag | Purpose |
 | --- | --- |
 | `--self-test` | Exercises the ink model, the layered window, hotkey registration and hotkey delivery, then exits. Writes `%TEMP%\screendraw-selftest.txt` and a rendered preview PNG. |
+| `--bench [WxH]` | Measures the render and present cost per frame, defaulting to 2560x1440. Writes `%TEMP%\screendraw-bench.txt`. |
 | `--arm` | Starts in the tray and arms the overlay after two seconds. |
 
 ## Troubleshooting

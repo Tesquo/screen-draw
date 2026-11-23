@@ -23,6 +23,7 @@ public sealed class GdiOverlayRenderer : IOverlayRenderer
     private nint _dib;
     private nint _previousBitmap;
     private Bitmap? _frame;
+    private Graphics? _frameGraphics;
     private Bitmap? _committed;
     private Graphics? _committedGraphics;
     private uint _committedVersion = uint.MaxValue;
@@ -73,8 +74,10 @@ public sealed class GdiOverlayRenderer : IOverlayRenderer
 
             _previousBitmap = NativeMethods.SelectObject(_memoryDc, _dib);
             _frame = new Bitmap(size.Width, size.Height, size.Width * 4, PixelFormat.Format32bppPArgb, bits);
+            _frameGraphics = Graphics.FromImage(_frame);
             _committed = new Bitmap(size.Width, size.Height, PixelFormat.Format32bppPArgb);
             _committedGraphics = Graphics.FromImage(_committed);
+            FillHitTestBackground(_committedGraphics, size);
             _committedVersion = uint.MaxValue;
             Size = size;
         }
@@ -86,13 +89,12 @@ public sealed class GdiOverlayRenderer : IOverlayRenderer
 
     public void Render(InkCanvas canvas, OverlayHud hud)
     {
-        var frame = _frame ?? throw new InvalidOperationException("Resize must be called before rendering.");
-        var committed = _committed!;
+        var committed = _committed ?? throw new InvalidOperationException("Resize must be called before rendering.");
 
         if (_committedVersion != (uint)canvas.Version)
         {
             var committedGraphics = _committedGraphics!;
-            committedGraphics.Clear(Color.Transparent);
+            FillHitTestBackground(committedGraphics, Size);
             foreach (var stroke in canvas.Strokes)
             {
                 DrawStroke(committedGraphics, stroke);
@@ -101,10 +103,11 @@ public sealed class GdiOverlayRenderer : IOverlayRenderer
             _committedVersion = (uint)canvas.Version;
         }
 
-        using var graphics = Graphics.FromImage(frame);
-        graphics.Clear(Color.Transparent);
-        FillHitTestBackground(graphics, frame.Size);
+        var graphics = _frameGraphics!;
+        graphics.CompositingMode = CompositingMode.SourceCopy;
         graphics.DrawImageUnscaled(committed, 0, 0);
+        graphics.CompositingMode = CompositingMode.SourceOver;
+
         if (canvas.Active is { } active)
         {
             DrawStroke(graphics, active);
@@ -286,6 +289,8 @@ public sealed class GdiOverlayRenderer : IOverlayRenderer
         _committedGraphics = null;
         _committed?.Dispose();
         _committed = null;
+        _frameGraphics?.Dispose();
+        _frameGraphics = null;
         _frame?.Dispose();
         _frame = null;
 
