@@ -1,4 +1,5 @@
 using System.Drawing.Imaging;
+using ScreenDraw.Core.Capture;
 using ScreenDraw.Core.Drawing;
 using ScreenDraw.Core.Input;
 using ScreenDraw.Core.Interop;
@@ -100,6 +101,71 @@ public static class SelfTest
             failures++;
             log.WriteLine($"FAIL  overlay window ({ex.GetType().Name}: {ex.Message})");
             log.WriteLine(ex.ToString());
+        }
+
+        Check("screen capture returns content", () =>
+        {
+            using var captured = ScreenCapture.Capture(new Rectangle(0, 0, 256, 256));
+            var lowest = 255;
+            var highest = 0;
+
+            for (var offset = 0; offset < 256; offset += 16)
+            {
+                var pixel = captured.GetPixel(offset, offset);
+                var light = (pixel.R + pixel.G + pixel.B) / 3;
+                lowest = Math.Min(lowest, light);
+                highest = Math.Max(highest, light);
+            }
+
+            return highest - lowest > 8;
+        });
+
+        var snapshotCanvas = new InkCanvas();
+        snapshotCanvas.Width = 6f;
+        snapshotCanvas.BeginStroke(new PointF(20f, 20f));
+        snapshotCanvas.ExtendStroke(new PointF(90f, 60f));
+        snapshotCanvas.ExtendStroke(new PointF(170f, 120f));
+        snapshotCanvas.EndStroke();
+
+        try
+        {
+            using var visible = new OverlayWindow(new Rectangle(60, 60, 220, 160), snapshotCanvas);
+            Thread.Sleep(150);
+            using var snapshot = visible.Snapshot();
+
+            var ink = 0;
+            var brightest = 0;
+            for (var x = 20; x < 170; x += 3)
+            {
+                for (var y = 20; y < 120; y += 3)
+                {
+                    var pixel = snapshot.GetPixel(x, y);
+                    brightest = Math.Max(brightest, (pixel.R + pixel.G + pixel.B) / 3);
+                    if (pixel.R > 180 && pixel.G > 150 && pixel.B < 120)
+                    {
+                        ink++;
+                    }
+                }
+            }
+
+            if (ink > 20)
+            {
+                log.WriteLine("PASS  snapshot captures the ink without chrome");
+            }
+            else if (brightest < 10)
+            {
+                log.WriteLine("SKIP  snapshot (no visible desktop to capture)");
+            }
+            else
+            {
+                failures++;
+                log.WriteLine($"FAIL  snapshot captures the ink without chrome (ink pixels {ink}, brightest {brightest})");
+            }
+        }
+        catch (Exception ex)
+        {
+            failures++;
+            log.WriteLine($"FAIL  snapshot ({ex.GetType().Name}: {ex.Message})");
         }
 
         using (var hotkeys = new HotkeyManager())

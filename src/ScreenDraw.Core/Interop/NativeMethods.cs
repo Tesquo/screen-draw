@@ -28,6 +28,8 @@ internal static partial class NativeMethods
     internal const uint PmRemove = 1;
     internal const uint TrackLeave = 2;
     internal const uint HitTestClient = 1;
+    internal const uint SrcCopy = 0x00CC0020;
+    internal const uint CaptureBlt = 0x40000000;
 
     internal const int ErrorClassAlreadyExists = 1410;
 
@@ -107,6 +109,21 @@ internal static partial class NativeMethods
 
     [LibraryImport("user32.dll")]
     internal static partial int ReleaseDC(nint hwnd, nint dc);
+
+    [LibraryImport("gdi32.dll", EntryPoint = "BitBlt", SetLastError = true)]
+    internal static partial int BitBlt(
+        nint destinationDc,
+        int x,
+        int y,
+        int width,
+        int height,
+        nint sourceDc,
+        int sourceX,
+        int sourceY,
+        uint rasterOperation);
+
+    [LibraryImport("dwmapi.dll")]
+    internal static partial int DwmFlush();
 
     [LibraryImport("user32.dll", EntryPoint = "LoadCursorW")]
     internal static partial nint LoadCursor(nint instance, nint cursor);

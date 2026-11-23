@@ -13,6 +13,7 @@ public enum HotkeyModifiers : uint
 public enum VirtualKey : uint
 {
     Escape = 0x1B,
+    Space = 0x20,
     B = 0x42,
     D = 0x44,
     E = 0x45,

@@ -14,7 +14,7 @@ internal sealed class SettingsForm : Form
         FormBorderStyle = FormBorderStyle.FixedSingle;
         MaximizeBox = false;
         StartPosition = FormStartPosition.CenterScreen;
-        ClientSize = new Size(430, 372);
+        ClientSize = new Size(430, 400);
 
         var title = new Label
         {
@@ -50,7 +50,7 @@ internal sealed class SettingsForm : Form
 
         var controls = new Label
         {
-            Text = "Left drag      ink\nMouse wheel    brush size\nMiddle click   undo\nRight click    clear\nEsc            finish",
+            Text = "Ink            left drag\nBrush size     mouse wheel  ·  [  ]\nColour         1 – 5\nEraser / pen   E / B\nUndo / clear   middle / right click\nSave + copy    Space\nFinish         Esc",
             Font = new Font("Consolas", 9.5f),
             AutoSize = true,
             Location = new Point(23, 124),
@@ -61,14 +61,14 @@ internal sealed class SettingsForm : Form
             Text = "Focus the window you want to draw on, then press the hotkey.",
             ForeColor = SystemColors.GrayText,
             AutoEllipsis = true,
-            Location = new Point(23, 246),
+            Location = new Point(23, 238),
             Size = new Size(384, 46),
         };
 
         var drawButton = new Button
         {
             Text = "Draw on last window",
-            Location = new Point(233, 302),
+            Location = new Point(233, 290),
             Size = new Size(174, 30),
         };
 
@@ -77,7 +77,7 @@ internal sealed class SettingsForm : Form
         var logButton = new Button
         {
             Text = "Open log",
-            Location = new Point(23, 302),
+            Location = new Point(23, 290),
             Size = new Size(96, 30),
         };
 
@@ -85,10 +85,10 @@ internal sealed class SettingsForm : Form
 
         var footer = new Label
         {
-            Text = "M0.1 · no capture, no injection, no focus stealing",
+            Text = "Snapshots go to Pictures\\Screen Draw",
             ForeColor = SystemColors.GrayText,
             AutoSize = true,
-            Location = new Point(23, 342),
+            Location = new Point(23, 336),
         };
 
         Controls.AddRange([title, subtitle, _hotkey, hotkeyHint, controls, _status, drawButton, logButton, footer]);

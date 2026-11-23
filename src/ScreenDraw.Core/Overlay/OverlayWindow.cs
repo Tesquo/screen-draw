@@ -1,4 +1,5 @@
 using System.Runtime.InteropServices;
+using ScreenDraw.Core.Capture;
 using ScreenDraw.Core.Diagnostics;
 using ScreenDraw.Core.Drawing;
 using ScreenDraw.Core.Interop;
@@ -26,6 +27,7 @@ public sealed class OverlayWindow : NativeWindowBase
     private bool _drawing;
     private bool _hintVisible;
     private bool _loggedFirstStroke;
+    private bool _suppressChrome;
     private bool _trackingLeave;
     private PointF? _cursor;
     private string? _label;
@@ -72,6 +74,24 @@ public sealed class OverlayWindow : NativeWindowBase
         _label = text;
         NativeMethods.SetTimer(Handle, LabelTimerId, LabelDuration, 0);
         Render();
+    }
+
+    internal Bitmap Snapshot()
+    {
+        _suppressChrome = true;
+        Render();
+        NativeMethods.DwmFlush();
+
+        try
+        {
+            NativeMethods.GetWindowRect(Handle, out var rect);
+            return ScreenCapture.Capture(rect.ToRectangle());
+        }
+        finally
+        {
+            _suppressChrome = false;
+            Render();
+        }
     }
 
     public override void Dispose()
@@ -198,12 +218,13 @@ public sealed class OverlayWindow : NativeWindowBase
 
     private void Render()
     {
+        var chrome = !_suppressChrome;
         _renderer.Render(
             _canvas,
             new OverlayHud(
-                Border: true,
-                Label: _label ?? (_hintVisible ? Hint : null),
-                Cursor: _cursor,
+                Border: chrome,
+                Label: chrome ? _label ?? (_hintVisible ? Hint : null) : null,
+                Cursor: chrome ? _cursor : null,
                 BrushWidth: _canvas.Width,
                 BrushColor: _canvas.Color,
                 Eraser: _canvas.Eraser));

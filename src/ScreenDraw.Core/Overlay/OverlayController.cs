@@ -10,9 +10,8 @@ public sealed class OverlayController : IDisposable
         [VirtualKey.D1, VirtualKey.D2, VirtualKey.D3, VirtualKey.D4, VirtualKey.D5];
 
     private readonly HotkeyManager _hotkeys;
-    private readonly List<int> _toolHotkeys = [];
+    private readonly List<int> _sessionHotkeys = [];
     private OverlayWindow? _window;
-    private int? _escapeHotkey;
     private nint _lastTarget;
 
     public OverlayController(HotkeyManager hotkeys)
@@ -27,6 +26,9 @@ public sealed class OverlayController : IDisposable
     public event EventHandler<string>? StatusChanged;
 
     public event EventHandler? ActiveChanged;
+
+    /// <summary>Raised on every snapshot. The receiver owns the image and must dispose it.</summary>
+    public event EventHandler<SnapshotEventArgs>? SnapshotTaken;
 
     public void NoteForeground()
     {
@@ -67,16 +69,10 @@ public sealed class OverlayController : IDisposable
             return;
         }
 
-        if (_hotkeys.TryRegister(HotkeyModifiers.None, VirtualKey.Escape, Dismiss, out var escape, out var escapeError))
-        {
-            _escapeHotkey = escape;
-        }
-        else
-        {
-            Log.Write($"arm: Esc unavailable ({escapeError}); close with the main hotkey instead");
-        }
-
+        RegisterSessionHotkey(VirtualKey.Escape, Dismiss, "Esc");
         RegisterToolHotkeys();
+        RegisterSessionHotkey(VirtualKey.Space, TakeSnapshot, "Space");
+
         Log.Write($"arm: drawing on '{window.Title}' hwnd=0x{window.Handle:X} rect={window.Bounds}");
         Report($"Drawing on {window.Title}. Left drag to ink, middle click to undo, right click to clear, Esc to finish.");
         ActiveChanged?.Invoke(this, EventArgs.Empty);
@@ -89,18 +85,12 @@ public sealed class OverlayController : IDisposable
             return;
         }
 
-        if (_escapeHotkey is { } escape)
-        {
-            _hotkeys.Unregister(escape);
-            _escapeHotkey = null;
-        }
-
-        foreach (var id in _toolHotkeys)
+        foreach (var id in _sessionHotkeys)
         {
             _hotkeys.Unregister(id);
         }
 
-        _toolHotkeys.Clear();
+        _sessionHotkeys.Clear();
         _window.Dispose();
         _window = null;
         Log.Write("overlay: dismissed");
@@ -110,52 +100,92 @@ public sealed class OverlayController : IDisposable
 
     public void Dispose() => Dismiss();
 
+    public void Announce(string text) => _window?.Announce(text);
+
+    private void TakeSnapshot()
+    {
+        if (_window is null)
+        {
+            return;
+        }
+
+        Bitmap image;
+        try
+        {
+            image = _window.Snapshot();
+        }
+        catch (Exception ex)
+        {
+            Log.Error("snapshot: capture", ex);
+            Announce("snapshot failed");
+            return;
+        }
+
+        try
+        {
+            if (SnapshotTaken is { } handler)
+            {
+                handler.Invoke(this, new SnapshotEventArgs(image));
+            }
+            else
+            {
+                image.Dispose();
+            }
+        }
+        catch (Exception ex)
+        {
+            Log.Error("snapshot: handler", ex);
+            image.Dispose();
+            Announce("snapshot failed");
+        }
+    }
+
     private void RegisterToolHotkeys()
     {
         for (var index = 0; index < Palette.Colors.Length && index < ColorKeys.Length; index++)
         {
             var color = index;
-            RegisterTool(ColorKeys[index], () =>
+            RegisterSessionHotkey(ColorKeys[index], () =>
             {
                 Canvas.SetColor(color);
                 Announce();
-            });
+            }, $"colour {index + 1}");
         }
 
-        RegisterTool(VirtualKey.E, () =>
+        RegisterSessionHotkey(VirtualKey.E, () =>
         {
             Canvas.ToggleEraser();
             Announce();
-        });
+        }, "E");
 
-        RegisterTool(VirtualKey.B, () =>
+        RegisterSessionHotkey(VirtualKey.B, () =>
         {
             Canvas.UsePen();
             Announce();
-        });
+        }, "B");
 
-        RegisterTool(VirtualKey.OemOpenBrackets, () =>
+        RegisterSessionHotkey(VirtualKey.OemOpenBrackets, () =>
         {
             Canvas.AdjustWidth(-1f);
             Announce();
-        });
+        }, "[");
 
-        RegisterTool(VirtualKey.OemCloseBrackets, () =>
+        RegisterSessionHotkey(VirtualKey.OemCloseBrackets, () =>
         {
             Canvas.AdjustWidth(1f);
             Announce();
-        });
+        }, "]");
     }
 
-    private void RegisterTool(VirtualKey key, Action action)
+    private void RegisterSessionHotkey(VirtualKey key, Action action, string label)
     {
         if (_hotkeys.TryRegister(HotkeyModifiers.None, key, action, out var id, out var error))
         {
-            _toolHotkeys.Add(id);
+            _sessionHotkeys.Add(id);
             return;
         }
 
-        Log.Write($"tools: {key} unavailable ({error})");
+        Log.Write($"arm: {label} unavailable ({error})");
     }
 
     private void Announce() => _window?.Announce(Canvas.Describe());

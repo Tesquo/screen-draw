@@ -1,3 +1,7 @@
+using System.ComponentModel;
+using System.Drawing.Imaging;
+using System.Globalization;
+using System.Runtime.InteropServices;
 using ScreenDraw.Core.Diagnostics;
 using ScreenDraw.Core.Input;
 using ScreenDraw.Core.Overlay;
@@ -44,6 +48,7 @@ internal sealed class TrayAppContext : ApplicationContext
         _tray.DoubleClick += (_, _) => ShowSettings();
         _overlay.StatusChanged += (_, message) => _settings.SetStatus(message);
         _overlay.ActiveChanged += (_, _) => _tray.Text = _overlay.IsActive ? "Screen Draw - drawing" : "Screen Draw";
+        _overlay.SnapshotTaken += (_, args) => SaveSnapshot(args.Image);
 
         var hotkey = RegisterHotkey();
         _settings.SetHotkey(hotkey);
@@ -106,6 +111,63 @@ internal sealed class TrayAppContext : ApplicationContext
     {
         await Task.Delay(2000);
         _overlay.Toggle();
+    }
+
+    private void SaveSnapshot(Bitmap image)
+    {
+        try
+        {
+            var folder = Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.MyPictures),
+                "Screen Draw");
+
+            Directory.CreateDirectory(folder);
+
+            var stamp = DateTime.Now.ToString("yyyyMMdd-HHmmss", CultureInfo.InvariantCulture);
+            var path = Path.Combine(folder, $"ScreenDraw-{stamp}.png");
+            for (var suffix = 2; File.Exists(path); suffix++)
+            {
+                path = Path.Combine(folder, $"ScreenDraw-{stamp}-{suffix}.png");
+            }
+
+            var started = Environment.TickCount64;
+            image.Save(path, ImageFormat.Png);
+            var copied = TryCopyToClipboard(image);
+
+            Log.Write(
+                $"snapshot: {path} ({image.Width}x{image.Height}, {Environment.TickCount64 - started} ms, clipboard={copied})");
+
+            _overlay.Announce(copied
+                ? $"saved + copied  ·  {image.Width}×{image.Height}"
+                : "saved  ·  clipboard busy");
+        }
+        catch (Exception ex)
+        {
+            Log.Error("snapshot: save", ex);
+            _overlay.Announce("snapshot failed");
+        }
+        finally
+        {
+            image.Dispose();
+        }
+    }
+
+    private static bool TryCopyToClipboard(Bitmap image)
+    {
+        for (var attempt = 0; attempt < 4; attempt++)
+        {
+            try
+            {
+                Clipboard.SetImage(image);
+                return true;
+            }
+            catch (ExternalException)
+            {
+                Thread.Sleep(40);
+            }
+        }
+
+        return false;
     }
 
     private void ShowSettings()
