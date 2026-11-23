@@ -168,23 +168,20 @@ public sealed class GdiOverlayRenderer : IOverlayRenderer
             graphics.DrawRectangle(pen, 0.5f, 0.5f, bounds.Width - 1.5f, bounds.Height - 1.5f);
         }
 
-        if (string.IsNullOrEmpty(hud.Hint) == false)
+        if (string.IsNullOrEmpty(hud.Label) == false)
         {
-            DrawHint(graphics, hud.Hint);
+            DrawLabel(graphics, hud.Label);
         }
 
-        if (hud.Cursor is { } position)
-        {
-            DrawBrushRing(graphics, position, hud.BrushWidth);
-        }
+        DrawBrushRing(graphics, hud);
     }
 
-    private static void DrawHint(Graphics graphics, string hint)
+    private static void DrawLabel(Graphics graphics, string label)
     {
         graphics.SmoothingMode = SmoothingMode.AntiAlias;
         graphics.TextRenderingHint = System.Drawing.Text.TextRenderingHint.ClearTypeGridFit;
 
-        var textSize = graphics.MeasureString(hint, HudFont);
+        var textSize = graphics.MeasureString(label, HudFont);
         var pill = new RectangleF(16f, 16f, textSize.Width + 24f, textSize.Height + 12f);
         using (var back = new SolidBrush(Color.FromArgb(214, 18, 20, 26)))
         using (var rounded = RoundedRectangle(pill, 7f))
@@ -193,30 +190,34 @@ public sealed class GdiOverlayRenderer : IOverlayRenderer
         }
 
         using var text = new SolidBrush(Color.FromArgb(255, 236, 240, 250));
-        graphics.DrawString(hint, HudFont, text, pill.X + 12f, pill.Y + 6f);
+        graphics.DrawString(label, HudFont, text, pill.X + 12f, pill.Y + 6f);
     }
 
-    private static void DrawBrushRing(Graphics graphics, PointF center, float brushWidth)
+    private static void DrawBrushRing(Graphics graphics, OverlayHud hud)
     {
-        graphics.SmoothingMode = SmoothingMode.AntiAlias;
+        if (hud.Cursor is not { } center)
+        {
+            return;
+        }
 
-        var diameter = Math.Max(brushWidth, MinimumRingDiameter);
+        var diameter = Math.Max(hud.BrushWidth, MinimumRingDiameter);
         var radius = diameter / 2f;
+        var color = hud.BrushColor ?? Color.White;
         var left = center.X - radius;
         var top = center.Y - radius;
 
-        using (var halo = new Pen(Color.FromArgb(150, 0, 0, 0), 2.5f))
-        {
-            graphics.DrawEllipse(halo, left, top, diameter, diameter);
-        }
+        graphics.SmoothingMode = SmoothingMode.AntiAlias;
 
-        using (var ring = new Pen(Color.FromArgb(235, 255, 255, 255), 1f))
-        {
-            graphics.DrawEllipse(ring, left, top, diameter, diameter);
-        }
+        using var halo = new Pen(Color.FromArgb(150, 0, 0, 0), 2.5f);
+        using var ring = new Pen(color, 1.4f) { DashStyle = hud.Eraser ? DashStyle.Dash : DashStyle.Solid };
+        graphics.DrawEllipse(halo, left, top, diameter, diameter);
+        graphics.DrawEllipse(ring, left, top, diameter, diameter);
 
-        using var dot = new SolidBrush(Color.FromArgb(235, 255, 255, 255));
-        graphics.FillEllipse(dot, center.X - 1f, center.Y - 1f, 2f, 2f);
+        if (!hud.Eraser)
+        {
+            using var dot = new SolidBrush(color);
+            graphics.FillEllipse(dot, center.X - 1f, center.Y - 1f, 2f, 2f);
+        }
     }
 
     private static GraphicsPath RoundedRectangle(RectangleF rectangle, float radius)

@@ -12,9 +12,11 @@ public sealed class OverlayWindow : NativeWindowBase
     private const string Hint = "Armed  ·  left drag to ink  ·  Esc to finish";
     private const uint TopMostInterval = 500;
     private const uint HintDuration = 2500;
+    private const uint LabelDuration = 1400;
 
     private static readonly nint TopMostTimerId = 1;
     private static readonly nint HintTimerId = 2;
+    private static readonly nint LabelTimerId = 3;
 
     private static readonly WindowExStyle Styles =
         WindowExStyle.Layered | WindowExStyle.TopMost | WindowExStyle.ToolWindow | WindowExStyle.NoActivate;
@@ -26,6 +28,7 @@ public sealed class OverlayWindow : NativeWindowBase
     private bool _loggedFirstStroke;
     private bool _trackingLeave;
     private PointF? _cursor;
+    private string? _label;
 
     public OverlayWindow(Rectangle bounds, InkCanvas canvas)
         : this(bounds, canvas, show: true)
@@ -63,6 +66,13 @@ public sealed class OverlayWindow : NativeWindowBase
     internal static OverlayWindow CreateForTest(Rectangle bounds, InkCanvas canvas) => new(bounds, canvas, show: false);
 
     internal void RenderFrame() => Render();
+
+    public void Announce(string text)
+    {
+        _label = text;
+        NativeMethods.SetTimer(Handle, LabelTimerId, LabelDuration, 0);
+        Render();
+    }
 
     public override void Dispose()
     {
@@ -149,9 +159,16 @@ public sealed class OverlayWindow : NativeWindowBase
                 Render();
                 return 0;
 
+            case WindowsMessages.Timer when wParam == LabelTimerId:
+                _label = null;
+                NativeMethods.KillTimer(hwnd, LabelTimerId);
+                Render();
+                return 0;
+
             case WindowsMessages.Destroy:
                 NativeMethods.KillTimer(hwnd, TopMostTimerId);
                 NativeMethods.KillTimer(hwnd, HintTimerId);
+                NativeMethods.KillTimer(hwnd, LabelTimerId);
                 return 0;
         }
 
@@ -183,7 +200,13 @@ public sealed class OverlayWindow : NativeWindowBase
     {
         _renderer.Render(
             _canvas,
-            new OverlayHud(Border: true, Hint: _hintVisible ? Hint : null, Cursor: _cursor, BrushWidth: _canvas.Width));
+            new OverlayHud(
+                Border: true,
+                Label: _label ?? (_hintVisible ? Hint : null),
+                Cursor: _cursor,
+                BrushWidth: _canvas.Width,
+                BrushColor: _canvas.Color,
+                Eraser: _canvas.Eraser));
         _renderer.Present();
     }
 

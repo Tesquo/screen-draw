@@ -17,11 +17,16 @@ Early. `0.1.x` is the overlay and the ink. Capture, clipboard export, tool palet
 | `Ctrl + Alt + D` | Arm the overlay over the focused window, or disarm it |
 | Left drag | Ink |
 | Mouse wheel | Brush size |
+| `1`–`5` | Yellow, red, cyan, green, white |
+| `E` / `B` | Eraser / pen |
+| `[` / `]` | Thinner / wider brush |
 | Middle click | Undo |
 | Right click | Clear |
 | `Esc` | Finish and close the overlay |
 
-The pointer becomes a ring sized to the brush, so the wheel gives immediate feedback. The system cursor is hidden while it is over the overlay.
+The pointer becomes a ring sized to the brush and tinted with the current colour — dashed while the eraser is selected — so the wheel gives immediate feedback. The system cursor is hidden while it is over the overlay.
+
+The overlay never takes focus, so the tool keys are registered as global hotkeys only while it is armed, and released on dismiss. Choosing a tool shows a one-line label of the current colour and width.
 
 The overlay is `WS_EX_NOACTIVATE`, so the window underneath keeps keyboard focus the whole time.
 
