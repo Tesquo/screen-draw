@@ -73,10 +73,10 @@ Everything meaningful is logged to `%LOCALAPPDATA%\ScreenDraw\screen-draw.log`, 
 
 ## Roadmap
 
-- **M1** Direct2D + DirectComposition renderer, tool palette, brush cursor, configurable hotkeys, window tracking while the overlay is armed.
+- **M1** Keyboard tool palette (colours, eraser, width), Direct2D + DirectComposition renderer, configurable hotkeys, window tracking while the overlay is armed.
 - **M2** `Windows.Graphics.Capture` frame grab, clipboard export as `CF_DIBV5` and PNG.
-- **M3** Persisted settings, per-monitor handling, hold-to-point laser mode.
-- **M4** Freeze-the-frame toggle, spotlight and zoom, note fade.
+- **M3** Persisted settings, per-monitor handling, note fade.
+- **M4** Freeze-the-frame toggle, spotlight and zoom.
 
 ## Limitations
 
