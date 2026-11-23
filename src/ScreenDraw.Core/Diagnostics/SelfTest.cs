@@ -60,6 +60,16 @@ public static class SelfTest
             return clampedHigh && clampedLow;
         });
 
+        Check("tools describe themselves", () =>
+        {
+            canvas.SetColor(1);
+            var colored = canvas.Describe() == "red · 4 px";
+            canvas.ToggleEraser();
+            var erasing = canvas.Describe() == "eraser · 4 px";
+            canvas.UsePen();
+            return colored && erasing && !canvas.Eraser;
+        });
+
         var bounds = new Rectangle(0, 0, 320, 200);
         try
         {

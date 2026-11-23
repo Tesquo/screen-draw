@@ -19,4 +19,11 @@ public enum VirtualKey : uint
     Q = 0x51,
     Z = 0x5A,
     F9 = 0x78,
+    D1 = 0x31,
+    D2 = 0x32,
+    D3 = 0x33,
+    D4 = 0x34,
+    D5 = 0x35,
+    OemOpenBrackets = 0xDB,
+    OemCloseBrackets = 0xDD,
 }

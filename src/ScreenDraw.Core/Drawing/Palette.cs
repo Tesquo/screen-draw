@@ -10,5 +10,7 @@ public static class Palette
 
     public static readonly Color[] Colors = [Yellow, Red, Cyan, Green, White];
 
+    public static readonly string[] Names = ["yellow", "red", "cyan", "green", "white"];
+
     public static Color Default => Yellow;
 }

@@ -92,4 +92,28 @@ public sealed class InkCanvas
         Color = Palette.Colors[(index + 1) % Palette.Colors.Length];
         Eraser = false;
     }
+
+    public void SetColor(int index)
+    {
+        Color = Palette.Colors[Math.Clamp(index, 0, Palette.Colors.Length - 1)];
+        Eraser = false;
+    }
+
+    public void ToggleEraser() => Eraser = !Eraser;
+
+    public void UsePen() => Eraser = false;
+
+    public void AdjustWidth(float delta) => Width += delta;
+
+    public string Describe()
+    {
+        if (Eraser)
+        {
+            return $"eraser · {Width:0} px";
+        }
+
+        var index = Array.IndexOf(Palette.Colors, Color);
+        var name = index >= 0 ? Palette.Names[index] : Color.Name.ToLowerInvariant();
+        return $"{name} · {Width:0} px";
+    }
 }

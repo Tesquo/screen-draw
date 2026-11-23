@@ -6,7 +6,11 @@ namespace ScreenDraw.Core.Overlay;
 
 public sealed class OverlayController : IDisposable
 {
+    private static readonly VirtualKey[] ColorKeys =
+        [VirtualKey.D1, VirtualKey.D2, VirtualKey.D3, VirtualKey.D4, VirtualKey.D5];
+
     private readonly HotkeyManager _hotkeys;
+    private readonly List<int> _toolHotkeys = [];
     private OverlayWindow? _window;
     private int? _escapeHotkey;
     private nint _lastTarget;
@@ -63,13 +67,16 @@ public sealed class OverlayController : IDisposable
             return;
         }
 
-        if (!_hotkeys.TryRegister(HotkeyModifiers.None, VirtualKey.Escape, Dismiss, out var escape, out var escapeError))
+        if (_hotkeys.TryRegister(HotkeyModifiers.None, VirtualKey.Escape, Dismiss, out var escape, out var escapeError))
         {
-            escape = 0;
+            _escapeHotkey = escape;
+        }
+        else
+        {
             Log.Write($"arm: Esc unavailable ({escapeError}); close with the main hotkey instead");
         }
 
-        _escapeHotkey = escape == 0 ? null : escape;
+        RegisterToolHotkeys();
         Log.Write($"arm: drawing on '{window.Title}' hwnd=0x{window.Handle:X} rect={window.Bounds}");
         Report($"Drawing on {window.Title}. Left drag to ink, middle click to undo, right click to clear, Esc to finish.");
         ActiveChanged?.Invoke(this, EventArgs.Empty);
@@ -88,6 +95,12 @@ public sealed class OverlayController : IDisposable
             _escapeHotkey = null;
         }
 
+        foreach (var id in _toolHotkeys)
+        {
+            _hotkeys.Unregister(id);
+        }
+
+        _toolHotkeys.Clear();
         _window.Dispose();
         _window = null;
         Log.Write("overlay: dismissed");
@@ -96,6 +109,56 @@ public sealed class OverlayController : IDisposable
     }
 
     public void Dispose() => Dismiss();
+
+    private void RegisterToolHotkeys()
+    {
+        for (var index = 0; index < Palette.Colors.Length && index < ColorKeys.Length; index++)
+        {
+            var color = index;
+            RegisterTool(ColorKeys[index], () =>
+            {
+                Canvas.SetColor(color);
+                Announce();
+            });
+        }
+
+        RegisterTool(VirtualKey.E, () =>
+        {
+            Canvas.ToggleEraser();
+            Announce();
+        });
+
+        RegisterTool(VirtualKey.B, () =>
+        {
+            Canvas.UsePen();
+            Announce();
+        });
+
+        RegisterTool(VirtualKey.OemOpenBrackets, () =>
+        {
+            Canvas.AdjustWidth(-1f);
+            Announce();
+        });
+
+        RegisterTool(VirtualKey.OemCloseBrackets, () =>
+        {
+            Canvas.AdjustWidth(1f);
+            Announce();
+        });
+    }
+
+    private void RegisterTool(VirtualKey key, Action action)
+    {
+        if (_hotkeys.TryRegister(HotkeyModifiers.None, key, action, out var id, out var error))
+        {
+            _toolHotkeys.Add(id);
+            return;
+        }
+
+        Log.Write($"tools: {key} unavailable ({error})");
+    }
+
+    private void Announce() => _window?.Announce(Canvas.Describe());
 
     private void Report(string message) => StatusChanged?.Invoke(this, message);
 }
