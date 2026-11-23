@@ -22,13 +22,15 @@ internal sealed class TrayAppContext : ApplicationContext
     private readonly HotkeyManager _hotkeys;
     private readonly OverlayController _overlay;
     private readonly SettingsForm _settings;
+    private readonly AppSettings _appSettings;
     private readonly System.Windows.Forms.Timer _tracker = new() { Interval = 300 };
 
     public TrayAppContext(bool armOnStart)
     {
         _hotkeys = new HotkeyManager();
         _overlay = new OverlayController(_hotkeys);
-        _settings = new SettingsForm(_overlay.Toggle);
+        _appSettings = AppSettings.Load();
+        _settings = new SettingsForm(_overlay.Toggle, _appSettings);
         _icon = (Icon)SystemIcons.Application.Clone();
 
         var menu = new ContextMenuStrip();
@@ -117,11 +119,17 @@ internal sealed class TrayAppContext : ApplicationContext
     {
         try
         {
-            var folder = Path.Combine(
-                Environment.GetFolderPath(Environment.SpecialFolder.MyPictures),
-                "Screen Draw");
-
-            Directory.CreateDirectory(folder);
+            var folder = _appSettings.SnapshotFolder;
+            try
+            {
+                Directory.CreateDirectory(folder);
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+            {
+                Log.Write($"snapshot: '{folder}' unusable ({ex.Message}); falling back to the pictures folder");
+                folder = AppSettings.DefaultFolder;
+                Directory.CreateDirectory(folder);
+            }
 
             var stamp = DateTime.Now.ToString("yyyyMMdd-HHmmss", CultureInfo.InvariantCulture);
             var path = Path.Combine(folder, $"ScreenDraw-{stamp}.png");

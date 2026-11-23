@@ -4,17 +4,21 @@ namespace ScreenDraw.App;
 
 internal sealed class SettingsForm : Form
 {
+    private readonly AppSettings _settings;
     private readonly Label _status;
     private readonly Label _hotkey;
+    private readonly Label _folder;
 
-    public SettingsForm(Action draw)
+    public SettingsForm(Action draw, AppSettings settings)
     {
+        _settings = settings;
+
         Text = "Screen Draw";
         Font = new Font("Segoe UI", 9f);
         FormBorderStyle = FormBorderStyle.FixedSingle;
         MaximizeBox = false;
         StartPosition = FormStartPosition.CenterScreen;
-        ClientSize = new Size(430, 400);
+        ClientSize = new Size(430, 444);
 
         var title = new Label
         {
@@ -50,7 +54,7 @@ internal sealed class SettingsForm : Form
 
         var controls = new Label
         {
-            Text = "Ink            left drag\nBrush size     mouse wheel  ·  [  ]\nColour         1 – 5\nEraser / pen   E / B\nUndo / clear   middle / right click\nSave + copy    Space\nFinish         Esc",
+            Text = "Ink            left drag\nBrush size     mouse wheel  ·  [  ]  hold\nColour         1 – 5\nEraser / pen   E / B\nUndo / clear   middle / right click\nSave + copy    Space\nFinish         Esc",
             Font = new Font("Consolas", 9.5f),
             AutoSize = true,
             Location = new Point(23, 124),
@@ -62,13 +66,48 @@ internal sealed class SettingsForm : Form
             ForeColor = SystemColors.GrayText,
             AutoEllipsis = true,
             Location = new Point(23, 238),
-            Size = new Size(384, 46),
+            Size = new Size(384, 40),
         };
+
+        var snapshots = new Label
+        {
+            Text = "Snapshots",
+            Font = new Font("Segoe UI Semibold", 9f),
+            AutoSize = true,
+            Location = new Point(23, 284),
+        };
+
+        _folder = new Label
+        {
+            Text = settings.SnapshotFolder,
+            ForeColor = SystemColors.GrayText,
+            AutoEllipsis = true,
+            Location = new Point(23, 304),
+            Size = new Size(384, 18),
+        };
+
+        var changeFolder = new Button
+        {
+            Text = "Change folder…",
+            Location = new Point(23, 328),
+            Size = new Size(130, 28),
+        };
+
+        changeFolder.Click += (_, _) => ChooseFolder();
+
+        var openFolder = new Button
+        {
+            Text = "Open folder",
+            Location = new Point(163, 328),
+            Size = new Size(104, 28),
+        };
+
+        openFolder.Click += (_, _) => OpenFolder();
 
         var drawButton = new Button
         {
             Text = "Draw on last window",
-            Location = new Point(233, 290),
+            Location = new Point(233, 372),
             Size = new Size(174, 30),
         };
 
@@ -77,42 +116,76 @@ internal sealed class SettingsForm : Form
         var logButton = new Button
         {
             Text = "Open log",
-            Location = new Point(23, 290),
+            Location = new Point(23, 372),
             Size = new Size(96, 30),
         };
 
-        logButton.Click += (_, _) => OpenLog();
+        logButton.Click += (_, _) => OpenPath(Log.FilePath);
 
         var footer = new Label
         {
-            Text = "Snapshots go to Pictures\\Screen Draw",
+            Text = "M0 · no capture hooking, no injection, no focus stealing",
             ForeColor = SystemColors.GrayText,
             AutoSize = true,
-            Location = new Point(23, 336),
+            Location = new Point(23, 414),
         };
 
-        Controls.AddRange([title, subtitle, _hotkey, hotkeyHint, controls, _status, drawButton, logButton, footer]);
+        Controls.AddRange([title, subtitle, _hotkey, hotkeyHint, controls, _status, snapshots, _folder, changeFolder, openFolder, drawButton, logButton, footer]);
     }
 
     public void SetStatus(string message) => _status.Text = message;
 
     public void SetHotkey(string? label) => _hotkey.Text = label ?? "(none — use the tray menu)";
 
-    private static void OpenLog()
+    private void ChooseFolder()
+    {
+        using var dialog = new FolderBrowserDialog
+        {
+            Description = "Where should snapshots be saved?",
+            UseDescriptionForTitle = true,
+            SelectedPath = Directory.Exists(_settings.SnapshotFolder) ? _settings.SnapshotFolder : AppSettings.DefaultFolder,
+        };
+
+        if (dialog.ShowDialog(this) != DialogResult.OK || string.IsNullOrWhiteSpace(dialog.SelectedPath))
+        {
+            return;
+        }
+
+        _settings.SnapshotFolder = dialog.SelectedPath;
+        _settings.Save();
+        _folder.Text = _settings.SnapshotFolder;
+    }
+
+    private void OpenFolder()
     {
         try
         {
-            Directory.CreateDirectory(Path.GetDirectoryName(Log.FilePath)!);
-            if (!File.Exists(Log.FilePath))
+            Directory.CreateDirectory(_settings.SnapshotFolder);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            SetStatus($"Could not open {_settings.SnapshotFolder}. {ex.Message}");
+            return;
+        }
+
+        OpenPath(_settings.SnapshotFolder);
+    }
+
+    private void OpenPath(string path)
+    {
+        try
+        {
+            Directory.CreateDirectory(Path.GetDirectoryName(path)!);
+            if (!File.Exists(path) && Path.HasExtension(path))
             {
-                File.WriteAllText(Log.FilePath, string.Empty);
+                File.WriteAllText(path, string.Empty);
             }
 
-            System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(Log.FilePath) { UseShellExecute = true });
+            System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(path) { UseShellExecute = true });
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or System.ComponentModel.Win32Exception)
         {
-            MessageBox.Show($"Could not open {Log.FilePath}.{Environment.NewLine}{ex.Message}", "Screen Draw");
+            SetStatus($"Could not open {path}. {ex.Message}");
         }
     }
 
