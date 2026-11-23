@@ -14,10 +14,12 @@ public sealed class OverlayWindow : NativeWindowBase
     private const uint TopMostInterval = 500;
     private const uint HintDuration = 2500;
     private const uint LabelDuration = 1400;
+    private const uint HoldInterval = 50;
 
     private static readonly nint TopMostTimerId = 1;
     private static readonly nint HintTimerId = 2;
     private static readonly nint LabelTimerId = 3;
+    private static readonly nint HoldTimerId = 4;
 
     private static readonly WindowExStyle Styles =
         WindowExStyle.Layered | WindowExStyle.TopMost | WindowExStyle.ToolWindow | WindowExStyle.NoActivate;
@@ -57,6 +59,7 @@ public sealed class OverlayWindow : NativeWindowBase
         if (show)
         {
             NativeMethods.SetTimer(Handle, HintTimerId, HintDuration, 0);
+            NativeMethods.SetTimer(Handle, HoldTimerId, HoldInterval, 0);
             NativeMethods.ShowWindow(Handle, NativeMethods.SwShowNoActivate);
         }
 
@@ -64,6 +67,8 @@ public sealed class OverlayWindow : NativeWindowBase
     }
 
     internal GdiOverlayRenderer Renderer => _renderer;
+
+    public event EventHandler? Held;
 
     internal static OverlayWindow CreateForTest(Rectangle bounds, InkCanvas canvas) => new(bounds, canvas, show: false);
 
@@ -185,10 +190,15 @@ public sealed class OverlayWindow : NativeWindowBase
                 Render();
                 return 0;
 
+            case WindowsMessages.Timer when wParam == HoldTimerId:
+                Held?.Invoke(this, EventArgs.Empty);
+                return 0;
+
             case WindowsMessages.Destroy:
                 NativeMethods.KillTimer(hwnd, TopMostTimerId);
                 NativeMethods.KillTimer(hwnd, HintTimerId);
                 NativeMethods.KillTimer(hwnd, LabelTimerId);
+                NativeMethods.KillTimer(hwnd, HoldTimerId);
                 return 0;
         }
 

@@ -9,10 +9,13 @@ public sealed class OverlayController : IDisposable
     private static readonly VirtualKey[] ColorKeys =
         [VirtualKey.D1, VirtualKey.D2, VirtualKey.D3, VirtualKey.D4, VirtualKey.D5];
 
+    private const long HoldDelay = 350;
+
     private readonly HotkeyManager _hotkeys;
     private readonly List<int> _sessionHotkeys = [];
     private OverlayWindow? _window;
     private nint _lastTarget;
+    private long _bracketPressedAt;
 
     public OverlayController(HotkeyManager hotkeys)
     {
@@ -68,6 +71,8 @@ public sealed class OverlayController : IDisposable
             Report($"Could not start drawing: {ex.Message}");
             return;
         }
+
+        _window.Held += (_, _) => RepeatWidth();
 
         RegisterSessionHotkey(VirtualKey.Escape, Dismiss, "Esc");
         RegisterToolHotkeys();
@@ -164,17 +169,8 @@ public sealed class OverlayController : IDisposable
             Announce();
         }, "B");
 
-        RegisterSessionHotkey(VirtualKey.OemOpenBrackets, () =>
-        {
-            Canvas.AdjustWidth(-1f);
-            Announce();
-        }, "[");
-
-        RegisterSessionHotkey(VirtualKey.OemCloseBrackets, () =>
-        {
-            Canvas.AdjustWidth(1f);
-            Announce();
-        }, "]");
+        RegisterSessionHotkey(VirtualKey.OemOpenBrackets, () => StepWidth(-1f), "[");
+        RegisterSessionHotkey(VirtualKey.OemCloseBrackets, () => StepWidth(1f), "]");
     }
 
     private void RegisterSessionHotkey(VirtualKey key, Action action, string label)
@@ -186,6 +182,32 @@ public sealed class OverlayController : IDisposable
         }
 
         Log.Write($"arm: {label} unavailable ({error})");
+    }
+
+    private void StepWidth(float delta)
+    {
+        Canvas.AdjustWidth(delta);
+        _bracketPressedAt = Environment.TickCount64;
+        Announce();
+    }
+
+    private void RepeatWidth()
+    {
+        if (_window is null || Environment.TickCount64 - _bracketPressedAt < HoldDelay)
+        {
+            return;
+        }
+
+        var narrower = KeyHold.IsDown(VirtualKey.OemOpenBrackets);
+        var wider = KeyHold.IsDown(VirtualKey.OemCloseBrackets);
+        if (!narrower && !wider)
+        {
+            return;
+        }
+
+        Canvas.AdjustWidth(narrower ? -1f : 1f);
+        _bracketPressedAt = Environment.TickCount64;
+        Announce();
     }
 
     private void Announce() => _window?.Announce(Canvas.Describe());

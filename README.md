@@ -19,7 +19,7 @@ Early. `0.1.x` is the overlay, the ink, the tool keys and snapshots. Settings, r
 | Mouse wheel | Brush size |
 | `1`–`5` | Yellow, red, cyan, green, white |
 | `E` / `B` | Eraser / pen |
-| `[` / `]` | Thinner / wider brush |
+| `[` / `]` | Thinner / wider brush — hold to keep going |
 | Middle click | Undo |
 | Right click | Clear |
 | `Space` | Snapshot: save a PNG and copy it to the clipboard |
