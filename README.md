@@ -8,7 +8,7 @@ It is built for the case where you are sharing your screen in Discord, Teams or 
 
 ## Status
 
-Early. `0.1.x` is the overlay and the ink. Capture, clipboard export, tool palette and settings come next; see the roadmap.
+Early. `0.1.x` is the overlay, the ink, the tool keys and snapshots. Settings, rebinding and a proper per-window capture come next; see the roadmap.
 
 ## Controls
 
@@ -22,6 +22,7 @@ Early. `0.1.x` is the overlay and the ink. Capture, clipboard export, tool palet
 | `[` / `]` | Thinner / wider brush |
 | Middle click | Undo |
 | Right click | Clear |
+| `Space` | Snapshot: save a PNG and copy it to the clipboard |
 | `Esc` | Finish and close the overlay |
 
 The pointer becomes a ring sized to the brush and tinted with the current colour — dashed while the eraser is selected — so the wheel gives immediate feedback. The system cursor is hidden while it is over the overlay.
@@ -31,6 +32,12 @@ The overlay never takes focus, so the tool keys are registered as global hotkeys
 The overlay is `WS_EX_NOACTIVATE`, so the window underneath keeps keyboard focus the whole time.
 
 If `Ctrl + Alt + D` is already taken by another application, Screen Draw falls back to `Ctrl + Shift + D` and then `Ctrl + Alt + Q`. The window shows which one it got, and the tray menu and the window both have a "Draw on last window" action that needs no hotkey at all.
+
+## Snapshots
+
+`Space` takes the annotated frame — the window plus your ink, without the overlay's border, label or brush ring — saves it as a PNG in `Pictures\Screen Draw`, and copies it to the clipboard. Press it as often as you like; each press writes a new file.
+
+It is a copy of the screen region rather than of the window, so anything sitting on top of the window at that moment is in the picture. A per-window grab that ignores occluding windows is M2.
 
 ## Requirements
 
@@ -73,13 +80,14 @@ Everything meaningful is logged to `%LOCALAPPDATA%\ScreenDraw\screen-draw.log`, 
 - A topmost, tool-windowed, layered window is created over the target window's DWM frame bounds, and painted with a premultiplied 32-bit DIB through `UpdateLayeredWindow`.
 - Layered windows are hit-tested against their alpha channel, so fully transparent pixels would be click-through. The frame keeps a minimum alpha of 1 across its whole area: invisible to the eye, clickable to the mouse.
 - Ink is a vector list of strokes. Committed strokes are rasterised once into an offscreen buffer and only the in-progress stroke is redrawn each frame.
-- Global hotkeys go through `RegisterHotKey` on a message-only window. `Esc` is registered only while the overlay is armed.
+- Global hotkeys go through `RegisterHotKey` on a message-only window. Everything the overlay needs — `Esc`, the tool keys, `Space` — is registered on arm and released on dismiss, so nothing is stolen outside drawing mode.
+- A snapshot re-renders the frame with its chrome suppressed, waits for DWM to compose it, then copies the region with `BitBlt` and `CAPTUREBLT`, which includes layered windows. The ink lands in the picture; the border, label and ring do not.
 - There is no hooking, no injection, no screen capture and no process interaction of any kind. That matters for anti-cheat: keep it that way.
 
 ## Roadmap
 
 - **M1** Keyboard tool palette (colours, eraser, width), Direct2D + DirectComposition renderer, configurable hotkeys, window tracking while the overlay is armed.
-- **M2** `Windows.Graphics.Capture` frame grab, clipboard export as `CF_DIBV5` and PNG.
+- **M2** `Windows.Graphics.Capture` for per-window grabs that ignore occluding windows, and a configurable save folder.
 - **M3** Persisted settings, per-monitor handling, note fade.
 - **M4** Freeze-the-frame toggle, spotlight and zoom.
 
