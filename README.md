@@ -59,6 +59,16 @@ dotnet publish src/ScreenDraw.App -c Release -r win-x64 --self-contained
 
 The app lives in the system tray. Closing the settings window hides it; use the tray menu to exit.
 
+### Standalone executable
+
+```powershell
+dotnet publish -p:PublishProfile=win-x64
+```
+
+Writes `artifacts\win-x64\ScreenDraw.exe`: one self-contained file, no .NET install required. It is unsigned, so SmartScreen will warn the first time you run it.
+
+Settings live in `%APPDATA%\ScreenDraw\settings.json`, snapshots wherever that file says, and logs in `%LOCALAPPDATA%\ScreenDraw\screen-draw.log`.
+
 ### Command line
 
 | Flag | Purpose |
