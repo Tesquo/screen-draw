@@ -19,7 +19,6 @@ jobs:
         run: dotnet build ScreenDraw.sln -c Release -v minimal
 
       - name: Self test
-        continue-on-error: true
         run: |
           $exe = "src/ScreenDraw.App/bin/Release/net10.0-windows/ScreenDraw.exe"
           $process = Start-Process -FilePath $exe -ArgumentList "--self-test" -Wait -PassThru
