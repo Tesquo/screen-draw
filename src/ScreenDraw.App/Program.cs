@@ -4,7 +4,7 @@ namespace ScreenDraw.App;
 
 internal static class Program
 {
-    private const string MutexName = @"Global\ScreenDraw.SingleInstance";
+    private const string MutexName = "ScreenDraw.SingleInstance";
 
     [STAThread]
     private static int Main(string[] args)
