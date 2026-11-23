@@ -23,6 +23,16 @@ internal static class SyntheticInput
         return NativeMethods.SendInput((uint)inputs.Length, inputs, Marshal.SizeOf<InputEvent>());
     }
 
+    public static uint KeyDown(ushort virtualKey) => Send(Key(virtualKey, up: false));
+
+    public static uint KeyUp(ushort virtualKey) => Send(Key(virtualKey, up: true));
+
+    private static uint Send(InputEvent input)
+    {
+        InputEvent[] inputs = [input];
+        return NativeMethods.SendInput(1, inputs, Marshal.SizeOf<InputEvent>());
+    }
+
     private static InputEvent Key(ushort virtualKey, bool up) => new()
     {
         Type = NativeMethods.InputKeyboard,

@@ -134,6 +134,9 @@ internal static partial class NativeMethods
     [LibraryImport("user32.dll", EntryPoint = "GetCursorPos")]
     internal static partial int GetCursorPos(out Point32 point);
 
+    [LibraryImport("user32.dll", EntryPoint = "GetAsyncKeyState")]
+    internal static partial short GetAsyncKeyState(int virtualKey);
+
     [LibraryImport("user32.dll", EntryPoint = "TrackMouseEvent")]
     internal static partial int TrackMouseEvent(ref TrackMouseEventData data);
 

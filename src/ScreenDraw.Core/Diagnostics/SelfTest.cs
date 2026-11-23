@@ -71,6 +71,28 @@ public static class SelfTest
             return colored && erasing && !canvas.Eraser;
         });
 
+        if (SyntheticInput.KeyDown((ushort)VirtualKey.OemCloseBrackets) == 0)
+        {
+            log.WriteLine("SKIP  held keys (input synthesis unavailable)");
+        }
+        else
+        {
+            var held = KeyHold.IsDown(VirtualKey.OemCloseBrackets);
+            SyntheticInput.KeyUp((ushort)VirtualKey.OemCloseBrackets);
+            Thread.Sleep(30);
+            var released = !KeyHold.IsDown(VirtualKey.OemCloseBrackets);
+
+            if (held && released)
+            {
+                log.WriteLine("PASS  held keys are observable");
+            }
+            else
+            {
+                failures++;
+                log.WriteLine($"FAIL  held keys are observable (held={held}, released={released})");
+            }
+        }
+
         var bounds = new Rectangle(0, 0, 320, 200);
         try
         {
@@ -120,8 +142,7 @@ public static class SelfTest
             return highest - lowest > 8;
         });
 
-        var snapshotCanvas = new InkCanvas();
-        snapshotCanvas.Width = 6f;
+        var snapshotCanvas = new InkCanvas();        snapshotCanvas.Width = 6f;
         snapshotCanvas.BeginStroke(new PointF(20f, 20f));
         snapshotCanvas.ExtendStroke(new PointF(90f, 60f));
         snapshotCanvas.ExtendStroke(new PointF(170f, 120f));
