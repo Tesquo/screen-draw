@@ -1,3 +1,4 @@
+using System.Runtime.InteropServices;
 using ScreenDraw.Core.Diagnostics;
 using ScreenDraw.Core.Drawing;
 using ScreenDraw.Core.Interop;
@@ -23,6 +24,8 @@ public sealed class OverlayWindow : NativeWindowBase
     private bool _drawing;
     private bool _hintVisible;
     private bool _loggedFirstStroke;
+    private bool _trackingLeave;
+    private PointF? _cursor;
 
     public OverlayWindow(Rectangle bounds, InkCanvas canvas)
         : this(bounds, canvas, show: true)
@@ -42,6 +45,7 @@ public sealed class OverlayWindow : NativeWindowBase
         _renderer = new GdiOverlayRenderer(Handle);
         _renderer.Resize(bounds.Size);
         _hintVisible = show;
+        _cursor = PointerWithin(bounds);
         Render();
 
         NativeMethods.SetTimer(Handle, TopMostTimerId, TopMostInterval, 0);
@@ -85,13 +89,25 @@ public sealed class OverlayWindow : NativeWindowBase
         switch (message)
         {
             case WindowsMessages.MouseMove:
+                _cursor = ToPoint(lParam);
+                TrackLeave(hwnd);
                 if (_drawing)
                 {
-                    _canvas.ExtendStroke(ToPoint(lParam));
-                    Render();
+                    _canvas.ExtendStroke(_cursor.Value);
                 }
 
+                Render();
                 return 0;
+
+            case WindowsMessages.MouseLeave:
+                _cursor = null;
+                _trackingLeave = false;
+                Render();
+                return 0;
+
+            case WindowsMessages.SetCursor when (lParam & 0xFFFF) == NativeMethods.HitTestClient:
+                NativeMethods.SetCursor(0);
+                return 1;
 
             case WindowsMessages.LeftButtonDown:
                 NativeMethods.SetCapture(hwnd);
@@ -120,6 +136,7 @@ public sealed class OverlayWindow : NativeWindowBase
 
             case WindowsMessages.MouseWheel:
                 _canvas.Width += WheelDelta(wParam) > 0 ? 1f : -1f;
+                Render();
                 return 0;
 
             case WindowsMessages.Timer when wParam == TopMostTimerId:
@@ -164,8 +181,39 @@ public sealed class OverlayWindow : NativeWindowBase
 
     private void Render()
     {
-        _renderer.Render(_canvas, new OverlayHud(Border: true, Hint: _hintVisible ? Hint : null));
+        _renderer.Render(
+            _canvas,
+            new OverlayHud(Border: true, Hint: _hintVisible ? Hint : null, Cursor: _cursor, BrushWidth: _canvas.Width));
         _renderer.Present();
+    }
+
+    private void TrackLeave(nint hwnd)
+    {
+        if (_trackingLeave)
+        {
+            return;
+        }
+
+        _trackingLeave = true;
+        var track = new TrackMouseEventData
+        {
+            Size = (uint)Marshal.SizeOf<TrackMouseEventData>(),
+            Flags = NativeMethods.TrackLeave,
+            Window = hwnd,
+        };
+
+        NativeMethods.TrackMouseEvent(ref track);
+    }
+
+    private static PointF? PointerWithin(Rectangle bounds)
+    {
+        if (NativeMethods.GetCursorPos(out var cursor) == 0)
+        {
+            return null;
+        }
+
+        var local = new Point(cursor.X - bounds.X, cursor.Y - bounds.Y);
+        return new Rectangle(Point.Empty, bounds.Size).Contains(local) ? local : null;
     }
 
     private void ReassertTopMost() =>
