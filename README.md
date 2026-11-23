@@ -23,6 +23,8 @@ Early. `0.1.x` is the overlay and the ink. Capture, clipboard export, tool palet
 
 The overlay is `WS_EX_NOACTIVATE`, so the window underneath keeps keyboard focus the whole time.
 
+If `Ctrl + Alt + D` is already taken by another application, Screen Draw falls back to `Ctrl + Shift + D` and then `Ctrl + Alt + Q`. The window shows which one it got, and the tray menu and the window both have a "Draw on last window" action that needs no hotkey at all.
+
 ## Requirements
 
 - Windows 10 19041 or newer, x64. The overlay is designed for windowed or borderless-windowed applications.
@@ -47,12 +49,21 @@ The app lives in the system tray. Closing the settings window hides it; use the 
 
 | Flag | Purpose |
 | --- | --- |
-| `--self-test` | Exercises the ink model, the layered window and hotkey registration, then exits. Writes `%TEMP%\screendraw-selftest.txt` and a rendered preview PNG. |
+| `--self-test` | Exercises the ink model, the layered window, hotkey registration and hotkey delivery, then exits. Writes `%TEMP%\screendraw-selftest.txt` and a rendered preview PNG. |
 | `--arm` | Starts in the tray and arms the overlay after two seconds. |
+
+## Troubleshooting
+
+Everything meaningful is logged to `%LOCALAPPDATA%\ScreenDraw\screen-draw.log`, including which hotkey was registered, what window each arm targeted, and any interop failure. The window has an **Open log** button.
+
+- **Hotkey does nothing.** Check the log for the hotkey line. If nothing was available, use the tray menu.
+- **Overlay flashes and disappears.** Something failed after creation; the log names it.
+- **Nothing is drawn but the window keeps focus.** Look for `arm:` lines — if there is no `arm:` line for your keypress, the hotkey was never delivered.
 
 ## How it works
 
 - A topmost, tool-windowed, layered window is created over the target window's DWM frame bounds, and painted with a premultiplied 32-bit DIB through `UpdateLayeredWindow`.
+- Layered windows are hit-tested against their alpha channel, so fully transparent pixels would be click-through. The frame keeps a minimum alpha of 1 across its whole area: invisible to the eye, clickable to the mouse.
 - Ink is a vector list of strokes. Committed strokes are rasterised once into an offscreen buffer and only the in-progress stroke is redrawn each frame.
 - Global hotkeys go through `RegisterHotKey` on a message-only window. `Esc` is registered only while the overlay is armed.
 - There is no hooking, no injection, no screen capture and no process interaction of any kind. That matters for anti-cheat: keep it that way.

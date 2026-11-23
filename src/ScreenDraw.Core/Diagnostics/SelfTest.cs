@@ -1,7 +1,7 @@
-using System.ComponentModel;
 using System.Drawing.Imaging;
 using ScreenDraw.Core.Drawing;
 using ScreenDraw.Core.Input;
+using ScreenDraw.Core.Interop;
 using ScreenDraw.Core.Overlay;
 
 namespace ScreenDraw.Core.Diagnostics;
@@ -70,7 +70,7 @@ public static class SelfTest
             if (frame is not null)
             {
                 Check("ink is visible in the frame", () => frame.GetPixel(45, 25).A > 0);
-                Check("empty pixels stay transparent", () => frame.GetPixel(300, 180).A == 0);
+                Check("empty pixels stay hit-testable but invisible", () => frame.GetPixel(300, 180).A is >= 1 and <= 2);
 
                 var preview = Path.Combine(Path.GetTempPath(), "screendraw-selftest.png");
                 frame.Save(preview, ImageFormat.Png);
@@ -86,21 +86,50 @@ public static class SelfTest
 
         using (var hotkeys = new HotkeyManager())
         {
-            try
-            {
-                var id = hotkeys.Register(
+            var fired = false;
+            if (!hotkeys.TryRegister(
                     HotkeyModifiers.Control | HotkeyModifiers.Alt | HotkeyModifiers.Shift,
                     VirtualKey.F9,
-                    () => { });
-                hotkeys.Unregister(id);
-                log.WriteLine("PASS  hotkey registration");
-            }
-            catch (Win32Exception ex)
+                    () => fired = true,
+                    out var id,
+                    out var error))
             {
-                log.WriteLine($"SKIP  hotkey registration ({ex.Message})");
+                log.WriteLine($"SKIP  hotkey registration ({error})");
+            }
+            else
+            {
+                log.WriteLine("PASS  hotkey registration");
+
+                var injected = SyntheticInput.Press(0x11, 0x12, 0x10, 0x78);
+                var deadline = Environment.TickCount64 + 1500;
+                while (!fired && Environment.TickCount64 < deadline)
+                {
+                    PumpMessages();
+                    Thread.Sleep(10);
+                }
+
+                if (injected == 0)
+                {
+                    log.WriteLine("SKIP  hotkey delivery (input synthesis unavailable)");
+                }
+                else
+                {
+                    Check("hotkey delivers WM_HOTKEY", () => fired);
+                }
+
+                hotkeys.Unregister(id);
             }
         }
 
         return failures == 0 ? 0 : 1;
+    }
+
+    private static void PumpMessages()
+    {
+        while (NativeMethods.PeekMessage(out var message, 0, 0, 0, NativeMethods.PmRemove) != 0)
+        {
+            NativeMethods.TranslateMessage(ref message);
+            NativeMethods.DispatchMessage(ref message);
+        }
     }
 }

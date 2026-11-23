@@ -23,6 +23,10 @@ internal static partial class NativeMethods
     internal const uint ModNoRepeat = 0x4000;
     internal const uint AttachParentProcess = 0xFFFFFFFF;
 
+    internal const uint InputKeyboard = 1;
+    internal const uint KeyEventKeyUp = 2;
+    internal const uint PmRemove = 1;
+
     internal const int ErrorClassAlreadyExists = 1410;
 
     internal static readonly nint HwndTopMost = -1;
@@ -104,6 +108,18 @@ internal static partial class NativeMethods
 
     [LibraryImport("user32.dll", EntryPoint = "LoadCursorW")]
     internal static partial nint LoadCursor(nint instance, nint cursor);
+
+    [LibraryImport("user32.dll", EntryPoint = "SendInput")]
+    internal static partial uint SendInput(uint count, [In] InputEvent[] inputs, int size);
+
+    [LibraryImport("user32.dll", EntryPoint = "PeekMessageW")]
+    internal static partial int PeekMessage(out Msg message, nint hwnd, uint minimum, uint maximum, uint remove);
+
+    [LibraryImport("user32.dll", EntryPoint = "TranslateMessage")]
+    internal static partial int TranslateMessage(ref Msg message);
+
+    [LibraryImport("user32.dll", EntryPoint = "DispatchMessageW")]
+    internal static partial nint DispatchMessage(ref Msg message);
 
     [LibraryImport("user32.dll", SetLastError = true)]
     internal static partial int UpdateLayeredWindow(

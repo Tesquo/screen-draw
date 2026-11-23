@@ -1,3 +1,4 @@
+using ScreenDraw.Core.Diagnostics;
 using ScreenDraw.Core.Drawing;
 using ScreenDraw.Core.Input;
 
@@ -8,6 +9,7 @@ public sealed class OverlayController : IDisposable
     private readonly HotkeyManager _hotkeys;
     private OverlayWindow? _window;
     private int? _escapeHotkey;
+    private nint _lastTarget;
 
     public OverlayController(HotkeyManager hotkeys)
     {
@@ -22,6 +24,14 @@ public sealed class OverlayController : IDisposable
 
     public event EventHandler? ActiveChanged;
 
+    public void NoteForeground()
+    {
+        if (WindowTarget.Foreground() is { } target)
+        {
+            _lastTarget = target.Handle;
+        }
+    }
+
     public void Toggle()
     {
         if (IsActive)
@@ -30,27 +40,37 @@ public sealed class OverlayController : IDisposable
             return;
         }
 
-        var target = WindowTarget.Foreground();
+        var target = WindowTarget.Foreground() ?? WindowTarget.FromHandle(_lastTarget);
         if (target is not { } window)
         {
+            Log.Write("arm: no drawable window");
             Report("Focus the window you want to draw on, then press the hotkey again.");
             return;
         }
 
         Canvas.Clear();
+        _lastTarget = window.Handle;
 
         try
         {
             _window = new OverlayWindow(window.Bounds, Canvas);
-            _escapeHotkey = _hotkeys.Register(HotkeyModifiers.None, VirtualKey.Escape, Dismiss);
         }
         catch (Exception ex)
         {
+            Log.Error("arm: overlay creation", ex);
             Dismiss();
             Report($"Could not start drawing: {ex.Message}");
             return;
         }
 
+        if (!_hotkeys.TryRegister(HotkeyModifiers.None, VirtualKey.Escape, Dismiss, out var escape, out var escapeError))
+        {
+            escape = 0;
+            Log.Write($"arm: Esc unavailable ({escapeError}); close with the main hotkey instead");
+        }
+
+        _escapeHotkey = escape == 0 ? null : escape;
+        Log.Write($"arm: drawing on '{window.Title}' hwnd=0x{window.Handle:X} rect={window.Bounds}");
         Report($"Drawing on {window.Title}. Left drag to ink, middle click to undo, right click to clear, Esc to finish.");
         ActiveChanged?.Invoke(this, EventArgs.Empty);
     }
@@ -70,6 +90,7 @@ public sealed class OverlayController : IDisposable
 
         _window.Dispose();
         _window = null;
+        Log.Write("overlay: dismissed");
         Report("Overlay closed.");
         ActiveChanged?.Invoke(this, EventArgs.Empty);
     }

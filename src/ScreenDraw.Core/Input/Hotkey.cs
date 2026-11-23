@@ -16,6 +16,7 @@ public enum VirtualKey : uint
     B = 0x42,
     D = 0x44,
     E = 0x45,
+    Q = 0x51,
     Z = 0x5A,
     F9 = 0x78,
 }
