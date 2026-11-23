@@ -1,0 +1,75 @@
+# Screen Draw
+
+Draw on a window while it keeps running.
+
+Press a hotkey and a transparent ink layer appears over the window you were just using. Annotate what is on screen, then clear it and carry on. Nothing is captured, nothing is intercepted, and the window never loses focus.
+
+It is built for the case where you are sharing your screen in Discord, Teams or OBS and want to point at something: a route in OSRS, a pull in WoW, a line in a terminal.
+
+## Status
+
+Early. `0.1.x` is the overlay and the ink. Capture, clipboard export, tool palette and settings come next; see the roadmap.
+
+## Controls
+
+| Input | Action |
+| --- | --- |
+| `Ctrl + Alt + D` | Arm the overlay over the focused window, or disarm it |
+| Left drag | Ink |
+| Mouse wheel | Brush size |
+| Middle click | Undo |
+| Right click | Clear |
+| `Esc` | Finish and close the overlay |
+
+The overlay is `WS_EX_NOACTIVATE`, so the window underneath keeps keyboard focus the whole time.
+
+## Requirements
+
+- Windows 10 19041 or newer, x64. The overlay is designed for windowed or borderless-windowed applications.
+- .NET 10 desktop runtime, or the self-contained build.
+
+## Build
+
+```powershell
+dotnet build
+dotnet run --project src/ScreenDraw.App
+```
+
+Release build:
+
+```powershell
+dotnet publish src/ScreenDraw.App -c Release -r win-x64 --self-contained
+```
+
+The app lives in the system tray. Closing the settings window hides it; use the tray menu to exit.
+
+### Command line
+
+| Flag | Purpose |
+| --- | --- |
+| `--self-test` | Exercises the ink model, the layered window and hotkey registration, then exits. Writes `%TEMP%\screendraw-selftest.txt` and a rendered preview PNG. |
+| `--arm` | Starts in the tray and arms the overlay after two seconds. |
+
+## How it works
+
+- A topmost, tool-windowed, layered window is created over the target window's DWM frame bounds, and painted with a premultiplied 32-bit DIB through `UpdateLayeredWindow`.
+- Ink is a vector list of strokes. Committed strokes are rasterised once into an offscreen buffer and only the in-progress stroke is redrawn each frame.
+- Global hotkeys go through `RegisterHotKey` on a message-only window. `Esc` is registered only while the overlay is armed.
+- There is no hooking, no injection, no screen capture and no process interaction of any kind. That matters for anti-cheat: keep it that way.
+
+## Roadmap
+
+- **M1** Direct2D + DirectComposition renderer, tool palette, brush cursor, configurable hotkeys, window tracking while the overlay is armed.
+- **M2** `Windows.Graphics.Capture` frame grab, clipboard export as `CF_DIBV5` and PNG.
+- **M3** Persisted settings, per-monitor handling, hold-to-point laser mode.
+- **M4** Freeze-the-frame toggle, spotlight and zoom, note fade.
+
+## Limitations
+
+- Exclusive-fullscreen games cannot be overlaid without hooking. Use borderless windowed.
+- If you share a single *window* in Discord or OBS, a topmost overlay will not appear in the share. Share the display instead.
+- Any always-on-top overlay can upset aggressive anti-cheat software. This tool never touches another process, but you use it at your own risk.
+
+## License
+
+MIT. See [LICENSE](LICENSE).

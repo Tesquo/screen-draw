@@ -1,0 +1,26 @@
+name: build
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Build
+        run: dotnet build ScreenDraw.sln -c Release -v minimal
+
+      - name: Self test
+        run: |
+          $exe = "src/ScreenDraw.App/bin/Release/net10.0-windows/ScreenDraw.exe"
+          $process = Start-Process -FilePath $exe -ArgumentList "--self-test" -Wait -PassThru
+          Get-Content "$env:TEMP/screendraw-selftest.txt"
+          exit $process.ExitCode
