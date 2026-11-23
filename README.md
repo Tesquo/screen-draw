@@ -21,6 +21,8 @@ Early. `0.1.x` is the overlay and the ink. Capture, clipboard export, tool palet
 | Right click | Clear |
 | `Esc` | Finish and close the overlay |
 
+The pointer becomes a ring sized to the brush, so the wheel gives immediate feedback. The system cursor is hidden while it is over the overlay.
+
 The overlay is `WS_EX_NOACTIVATE`, so the window underneath keeps keyboard focus the whole time.
 
 If `Ctrl + Alt + D` is already taken by another application, Screen Draw falls back to `Ctrl + Shift + D` and then `Ctrl + Alt + Q`. The window shows which one it got, and the tray menu and the window both have a "Draw on last window" action that needs no hotkey at all.

@@ -26,6 +26,8 @@ internal static partial class NativeMethods
     internal const uint InputKeyboard = 1;
     internal const uint KeyEventKeyUp = 2;
     internal const uint PmRemove = 1;
+    internal const uint TrackLeave = 2;
+    internal const uint HitTestClient = 1;
 
     internal const int ErrorClassAlreadyExists = 1410;
 
@@ -108,6 +110,15 @@ internal static partial class NativeMethods
 
     [LibraryImport("user32.dll", EntryPoint = "LoadCursorW")]
     internal static partial nint LoadCursor(nint instance, nint cursor);
+
+    [LibraryImport("user32.dll", EntryPoint = "SetCursor")]
+    internal static partial nint SetCursor(nint cursor);
+
+    [LibraryImport("user32.dll", EntryPoint = "GetCursorPos")]
+    internal static partial int GetCursorPos(out Point32 point);
+
+    [LibraryImport("user32.dll", EntryPoint = "TrackMouseEvent")]
+    internal static partial int TrackMouseEvent(ref TrackMouseEventData data);
 
     [LibraryImport("user32.dll", EntryPoint = "SendInput")]
     internal static partial uint SendInput(uint count, [In] InputEvent[] inputs, int size);

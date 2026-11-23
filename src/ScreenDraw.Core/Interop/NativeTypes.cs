@@ -43,6 +43,8 @@ internal static class WindowsMessages
     public const uint CaptureChanged = 0x0215;
     public const uint Timer = 0x0113;
     public const uint Hotkey = 0x0312;
+    public const uint SetCursor = 0x0020;
+    public const uint MouseLeave = 0x02A3;
 }
 
 [StructLayout(LayoutKind.Sequential)]
@@ -192,4 +194,13 @@ internal struct MouseInput
     public uint Flags;
     public uint Time;
     public nint ExtraInfo;
+}
+
+[StructLayout(LayoutKind.Sequential)]
+internal struct TrackMouseEventData
+{
+    public uint Size;
+    public uint Flags;
+    public nint Window;
+    public uint HoverTime;
 }

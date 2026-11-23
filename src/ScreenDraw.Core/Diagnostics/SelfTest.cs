@@ -3,6 +3,7 @@ using ScreenDraw.Core.Drawing;
 using ScreenDraw.Core.Input;
 using ScreenDraw.Core.Interop;
 using ScreenDraw.Core.Overlay;
+using ScreenDraw.Core.Rendering;
 
 namespace ScreenDraw.Core.Diagnostics;
 
@@ -71,6 +72,13 @@ public static class SelfTest
             {
                 Check("ink is visible in the frame", () => frame.GetPixel(45, 25).A > 0);
                 Check("empty pixels stay hit-testable but invisible", () => frame.GetPixel(300, 180).A is >= 1 and <= 2);
+
+                window.Renderer.Render(canvas, new OverlayHud(Cursor: new PointF(120f, 140f), BrushWidth: 24f));
+                Check("brush ring marks the cursor", () => frame.GetPixel(120, 128).A > 0);
+                Check("brush ring is hollow", () => frame.GetPixel(120, 135).A <= 2);
+
+                window.Renderer.Render(canvas, new OverlayHud(Cursor: new PointF(120f, 140f), BrushWidth: 40f));
+                Check("brush ring follows the brush size", () => frame.GetPixel(120, 121).A > 0);
 
                 var preview = Path.Combine(Path.GetTempPath(), "screendraw-selftest.png");
                 frame.Save(preview, ImageFormat.Png);
