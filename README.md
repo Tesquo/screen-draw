@@ -35,7 +35,7 @@ If `Ctrl + Alt + D` is already taken by another application, Screen Draw falls b
 
 ## Snapshots
 
-`Space` takes the annotated frame — the window plus your ink, without the overlay's border, label or brush ring — saves it as a PNG in `Pictures\Screen Draw`, and copies it to the clipboard. This is designed in a way so that you can step through stages of annotation, without losing the canvas.
+`Space` takes the annotated frame without the overlay's border, label or brush ring — saves it as a PNG in `Pictures\Screen Draw`, and copies it to the clipboard. This is designed in a way so that you can step through stages of annotation, without losing the canvas.
 
 It is a copy of the screen region rather than of the window, so anything sitting on top of the window at that moment is in the picture. A per-window grab that ignores occluding windows is M2.
 
@@ -59,13 +59,15 @@ dotnet publish src/ScreenDraw.App -c Release -r win-x64 --self-contained
 
 The app lives in the system tray. Closing the settings window hides it; use the tray menu to exit.
 
-### Standalone executable
+### Release build
 
 ```powershell
-dotnet publish -p:PublishProfile=win-x64
+.\scripts\release.ps1
 ```
 
-Writes `artifacts\win-x64\ScreenDraw.exe`: one self-contained file, no .NET install required. It is unsigned, so SmartScreen will warn the first time you run it.
+Publishes a self-contained `artifacts\win-x64\` folder, zips it to `artifacts\screen-draw-<version>-win-x64.zip`, and writes `SHA256SUMS.txt` next to it. No .NET install is required.
+
+The output is deliberately a folder rather than one file, due to a previous false positive heuristic, see [Antivirus and trust](#antivirus-and-trust).
 
 Settings live in `%APPDATA%\ScreenDraw\settings.json`, snapshots wherever that file says, and logs in `%LOCALAPPDATA%\ScreenDraw\screen-draw.log`.
 
@@ -106,6 +108,18 @@ Everything meaningful is logged to `%LOCALAPPDATA%\ScreenDraw\screen-draw.log`, 
 - Exclusive-fullscreen games cannot be overlaid without hooking. Use borderless windowed.
 - If you share a single *window* in Discord or OBS, a topmost overlay will not appear in the share. The display needs to be shared instead.
 - Any always-on-top overlay can upset aggressive anti-cheat software. This tool never touches another process, but you understand that you use this program at your own risk.
+
+## Antivirus and trust
+
+Screen Draw is unsigned, and it does three things behavioural scanners are built to dislike: it registers global hotkeys, reads key state while a width key is held, and copies the screen. Any detections are false positives based on these heuristics.
+
+This is open source, so you are welcome to check:
+
+- No network code exists in the project. Nothing is uploaded, phoned home or auto-updated.
+- No installer, service, driver or admin rights. The manifest requests `asInvoker`.
+- No injection and no hooks. The overlay is an ordinary layered window built from documented Win32 calls.
+- `ScreenDraw.exe --self-test` exercises the ink, the overlay, the hotkeys and the snapshot path, and writes only to `%TEMP%`.
+- Build it yourself and compare the hash with the release.
 
 ## License
 

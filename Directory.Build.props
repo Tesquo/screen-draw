@@ -9,6 +9,11 @@
     <SatelliteResourceLanguages>en</SatelliteResourceLanguages>
     <EnableNETAnalyzers>true</EnableNETAnalyzers>
     <AnalysisMode>Recommended</AnalysisMode>
+    <Company>ScreenDraw</Company>
+    <Product>Screen Draw</Product>
+    <Copyright>Copyright (c) 2026 Joshua Faulkner</Copyright>
+    <RepositoryUrl>https://github.com/Tesquo/screen-draw</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)' == 'Release'">
