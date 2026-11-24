@@ -31,7 +31,7 @@ internal sealed class TrayAppContext : ApplicationContext
         _overlay = new OverlayController(_hotkeys);
         _appSettings = AppSettings.Load();
         _settings = new SettingsForm(_overlay.Toggle, _appSettings);
-        _icon = (Icon)SystemIcons.Application.Clone();
+        _icon = IconAssets.Tray();
 
         var menu = new ContextMenuStrip();
         menu.Items.Add("Draw on last window", null, (_, _) => _overlay.Toggle());
