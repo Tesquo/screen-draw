@@ -6,10 +6,20 @@ Press a hotkey and a transparent ink layer appears over the window you were just
 
 This is intended as an annotation-first application. Screensharing on teams/discord/something else and need an easy way to point out something or add extra info? Use this tool to do so seamlessly without losing focus of windows.
 
+## Quick start
+
+Download the latest build from [Releases](https://github.com/Tesquo/screen-draw/releases), extract the zip, run `ScreenDraw.exe`, then press `Ctrl + Alt + D` over any window.
+
 ## Status
 
-Early. `0.1.x` is the overlay, the ink, the tool keys and snapshots. Settings, rebinding and a proper per-window capture come next; see the roadmap.
+Early. `0.2.x` contains the overlay, painting, toolbar keys and snapshots, packaged as a self contained folder. TODO includes a configurable arm hotkey, window tracking while the overlay is armed, and per-window captures, and other features like text boxes, highlighting etc.
 
+## Limitations
+
+- Exclusive-fullscreen games cannot be overlaid without hooking. Use borderless windowed.
+- If you share a single *window* in Discord or OBS, a topmost overlay will not appear in the share. The display needs to be shared instead.
+- Any always-on-top overlay can upset aggressive anti-cheat software. This tool never touches another process, but you understand that you use this program at your own risk.
+  
 ## Controls
 
 | Input | Action |
@@ -35,14 +45,17 @@ If `Ctrl + Alt + D` is already taken by another application, Screen Draw falls b
 
 ## Snapshots
 
-`Space` takes the annotated frame without the overlay's border, label or brush ring — saves it as a PNG in `Pictures\Screen Draw`, and copies it to the clipboard. This is designed in a way so that you can step through stages of annotation, without losing the canvas.
+`Space` takes the annotated frame without the overlay's border, label or brush ring — saves it as a PNG in `Pictures\Screen Draw`, and copies it to the clipboard. 
+- This folder can be changed to whatever you want.
+
+This is designed in a way so that you can step through stages of annotation, without losing the canvas.
 
 It is a copy of the screen region rather than of the window, so anything sitting on top of the window at that moment is in the picture. A per-window grab that ignores occluding windows is M2.
 
 ## Requirements
 
 - Windows 10 19041 or newer, x64. The overlay is designed for windowed or borderless-windowed applications.
-- .NET 10 desktop runtime, or the self-contained build.
+- .NET 10 SDK (if compiling), or the self-contained build.
 
 ## Build
 
@@ -51,25 +64,10 @@ dotnet build
 dotnet run --project src/ScreenDraw.App
 ```
 
-Release build:
-
-```powershell
-dotnet publish src/ScreenDraw.App -c Release -r win-x64 --self-contained
+To produce a release:
 ```
-
-The app lives in the system tray. Closing the settings window hides it; use the tray menu to exit.
-
-### Release build
-
-```powershell
 .\scripts\release.ps1
 ```
-
-Publishes a self-contained `artifacts\win-x64\` folder, zips it to `artifacts\screen-draw-<version>-win-x64.zip`, and writes `SHA256SUMS.txt` next to it. No .NET install is required.
-
-The output is deliberately a folder rather than one file, due to a previous false positive heuristic, see [Antivirus and trust](#antivirus-and-trust).
-
-Settings live in `%APPDATA%\ScreenDraw\settings.json`, snapshots wherever that file says, and logs in `%LOCALAPPDATA%\ScreenDraw\screen-draw.log`.
 
 ### Command line
 
@@ -86,6 +84,7 @@ Everything meaningful is logged to `%LOCALAPPDATA%\ScreenDraw\screen-draw.log`, 
 - **Hotkey does nothing.** Check the log for the hotkey line. If nothing was available, use the tray menu.
 - **Overlay flashes and disappears.** Something failed after creation, logs name it.
 - **Nothing is drawn but the window keeps focus.** Look for `arm:` lines — if there is no `arm:` line for your keypress, the hotkey was never delivered.
+- **I have a problem that's not listed or it's not working for me at all.** Open an issue [here](https://github.com/Tesquo/screen-draw/issues) describing your problem.
 
 ## How it works
 
@@ -94,7 +93,7 @@ Everything meaningful is logged to `%LOCALAPPDATA%\ScreenDraw\screen-draw.log`, 
 - Ink is a vector list of strokes. Committed strokes are rasterised once into an offscreen buffer and only the in-progress stroke is redrawn each frame.
 - Global hotkeys go through `RegisterHotKey` on a message-only window. Everything the overlay needs — `Esc`, the tool keys, `Space` — is registered on arm and released on dismiss, so nothing is stolen outside drawing mode.
 - A snapshot re-renders the frame with its chrome suppressed, waits for DWM to compose it, then copies the region with `BitBlt` and `CAPTUREBLT`, which includes layered windows. The ink lands in the picture; the border, label and ring do not.
-- There is no hooking, no injection, no screen capture and no process interaction of any kind. This is due to not wanting to interfere with anti-cheats or other programs that might have issues with an overlay like this.
+- There is no hooking, no injection and no process interaction of any kind. This is due to not wanting to interfere with anti-cheats or other programs that might have issues with an overlay like this.
 
 ## Roadmap
 
@@ -103,17 +102,11 @@ Everything meaningful is logged to `%LOCALAPPDATA%\ScreenDraw\screen-draw.log`, 
 - **M3** Persisted settings, per-monitor handling, note fade.
 - **M4** Freeze-the-frame toggle, spotlight and zoom.
 
-## Limitations
-
-- Exclusive-fullscreen games cannot be overlaid without hooking. Use borderless windowed.
-- If you share a single *window* in Discord or OBS, a topmost overlay will not appear in the share. The display needs to be shared instead.
-- Any always-on-top overlay can upset aggressive anti-cheat software. This tool never touches another process, but you understand that you use this program at your own risk.
-
 ## Antivirus and trust
 
 Screen Draw is unsigned, and it does three things behavioural scanners are built to dislike: it registers global hotkeys, reads key state while a width key is held, and copies the screen. Any detections are false positives based on these heuristics.
 
-This is open source, so you are welcome to check:
+This is open source, so you are welcome to check these statements:
 
 - No network code exists in the project. Nothing is uploaded, phoned home or auto-updated.
 - No installer, service, driver or admin rights. The manifest requests `asInvoker`.
