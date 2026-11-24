@@ -59,13 +59,15 @@ dotnet publish src/ScreenDraw.App -c Release -r win-x64 --self-contained
 
 The app lives in the system tray. Closing the settings window hides it; use the tray menu to exit.
 
-### Standalone executable
+### Release build
 
 ```powershell
-dotnet publish -p:PublishProfile=win-x64
+.\scripts\release.ps1
 ```
 
-Writes `artifacts\win-x64\ScreenDraw.exe`: one self-contained file, no .NET install required. It is unsigned, so SmartScreen will warn the first time you run it.
+Publishes a self-contained `artifacts\win-x64\` folder, zips it to `artifacts\screen-draw-<version>-win-x64.zip`, and writes `SHA256SUMS.txt` next to it. No .NET install is required on the target machine.
+
+The output is deliberately a folder rather than one file — see [Antivirus and trust](#antivirus-and-trust).
 
 Settings live in `%APPDATA%\ScreenDraw\settings.json`, snapshots wherever that file says, and logs in `%LOCALAPPDATA%\ScreenDraw\screen-draw.log`.
 
@@ -106,6 +108,22 @@ Everything meaningful is logged to `%LOCALAPPDATA%\ScreenDraw\screen-draw.log`, 
 - Exclusive-fullscreen games cannot be overlaid without hooking. Use borderless windowed.
 - If you share a single *window* in Discord or OBS, a topmost overlay will not appear in the share. Share the display instead.
 - Any always-on-top overlay can upset aggressive anti-cheat software. This tool never touches another process, but you use it at your own risk.
+
+## Antivirus and trust
+
+Screen Draw is unsigned, and it does three things behavioural scanners are built to dislike: it registers global hotkeys, reads key state while a width key is held, and copies the screen. Expect at least one engine to object. A known Hybrid Analysis report scores it "Malicious" on that basis, while twenty-two of twenty-three antivirus engines call it clean — and the flags it raises are runtime artefacts (`IsDebuggerPresent`, TLS callbacks, `bcrypt` strings) plus WinForms querying *mouse button* state, which the sandbox files as keylogging.
+
+Releases used to be a single self-contained file. `PublishSingleFile` embeds a compressed .NET runtime as an executable resource and extracts it at startup, which is indistinguishable from a dropper to a static analyser, and that was the one indicator the report rated 10/10. Releases are now a plain folder, where the runtime is Microsoft-signed DLLs sitting beside ours.
+
+What you can check yourself:
+
+- No network code exists in the project. Nothing is uploaded, phoned home or auto-updated.
+- No installer, service, driver or admin rights. The manifest requests `asInvoker`.
+- No injection and no hooks. The overlay is an ordinary layered window built from documented Win32 calls.
+- `ScreenDraw.exe --self-test` exercises the ink, the overlay, the hotkeys and the snapshot path, and writes only to `%TEMP%`.
+- Build it yourself and compare the hash with the release.
+
+Code signing is the real fix for both this and SmartScreen, and it costs money. Two free options exist for open source and neither is wired up yet: [SignPath Foundation](https://signpath.org) and [Certum's open source certificate](https://www.certum.eu/en/certificates/open-source-code-signing/).
 
 ## License
 
