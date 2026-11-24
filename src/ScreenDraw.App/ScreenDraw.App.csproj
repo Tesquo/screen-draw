@@ -7,7 +7,13 @@
     <AssemblyName>ScreenDraw</AssemblyName>
     <Version>0.1.0</Version>
     <ApplicationManifest>app.manifest</ApplicationManifest>
+    <ApplicationIcon>..\..\assets\screen-draw.ico</ApplicationIcon>
   </PropertyGroup>
+
+  <ItemGroup>
+    <EmbeddedResource Include="..\..\assets\screen-draw.ico" LogicalName="ScreenDraw.app.ico" />
+    <EmbeddedResource Include="..\..\assets\screen-draw-tray.ico" LogicalName="ScreenDraw.tray.ico" />
+  </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\ScreenDraw.Core\ScreenDraw.Core.csproj" />

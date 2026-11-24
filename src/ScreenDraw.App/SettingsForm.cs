@@ -14,6 +14,7 @@ internal sealed class SettingsForm : Form
         _settings = settings;
 
         Text = "Screen Draw";
+        Icon = IconAssets.Window();
         Font = new Font("Segoe UI", 9f);
         FormBorderStyle = FormBorderStyle.FixedSingle;
         MaximizeBox = false;
