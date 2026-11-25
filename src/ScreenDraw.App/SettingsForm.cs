@@ -19,7 +19,7 @@ internal sealed class SettingsForm : Form
         FormBorderStyle = FormBorderStyle.FixedSingle;
         MaximizeBox = false;
         StartPosition = FormStartPosition.CenterScreen;
-        ClientSize = new Size(430, 444);
+        ClientSize = new Size(430, 462);
 
         var title = new Label
         {
@@ -47,7 +47,7 @@ internal sealed class SettingsForm : Form
 
         var hotkeyHint = new Label
         {
-            Text = "arms and disarms the overlay",
+            Text = "Arms and disarms the overlay",
             ForeColor = SystemColors.GrayText,
             AutoSize = true,
             Location = new Point(196, 93),
@@ -55,7 +55,7 @@ internal sealed class SettingsForm : Form
 
         var controls = new Label
         {
-            Text = "Ink            left drag\nBrush size     mouse wheel  ·  [  ]  hold\nColour         1 – 5\nEraser / pen   E / B\nUndo / clear   middle / right click\nSave + copy    Space\nFinish         Esc",
+            Text = "Ink            left drag\nBrush size     mouse wheel  /  [  ]  hold\nColour         1 – 6\nEraser         E\nHighlighter    H\nUndo / clear   middle / right click\nSave + copy    Space\nFinish         Esc",
             Font = new Font("Consolas", 9.5f),
             AutoSize = true,
             Location = new Point(23, 124),
@@ -66,8 +66,8 @@ internal sealed class SettingsForm : Form
             Text = "Focus the window you want to draw on, then press the hotkey.",
             ForeColor = SystemColors.GrayText,
             AutoEllipsis = true,
-            Location = new Point(23, 238),
-            Size = new Size(384, 40),
+            Location = new Point(23, 252),
+            Size = new Size(384, 38),
         };
 
         var snapshots = new Label
@@ -75,7 +75,7 @@ internal sealed class SettingsForm : Form
             Text = "Snapshots",
             Font = new Font("Segoe UI Semibold", 9f),
             AutoSize = true,
-            Location = new Point(23, 284),
+            Location = new Point(23, 300),
         };
 
         _folder = new Label
@@ -83,14 +83,14 @@ internal sealed class SettingsForm : Form
             Text = settings.SnapshotFolder,
             ForeColor = SystemColors.GrayText,
             AutoEllipsis = true,
-            Location = new Point(23, 304),
+            Location = new Point(23, 320),
             Size = new Size(384, 18),
         };
 
         var changeFolder = new Button
         {
             Text = "Change folder…",
-            Location = new Point(23, 328),
+            Location = new Point(23, 344),
             Size = new Size(130, 28),
         };
 
@@ -99,7 +99,7 @@ internal sealed class SettingsForm : Form
         var openFolder = new Button
         {
             Text = "Open folder",
-            Location = new Point(163, 328),
+            Location = new Point(163, 344),
             Size = new Size(104, 28),
         };
 
@@ -108,7 +108,7 @@ internal sealed class SettingsForm : Form
         var drawButton = new Button
         {
             Text = "Draw on last window",
-            Location = new Point(233, 372),
+            Location = new Point(233, 388),
             Size = new Size(174, 30),
         };
 
@@ -117,7 +117,7 @@ internal sealed class SettingsForm : Form
         var logButton = new Button
         {
             Text = "Open log",
-            Location = new Point(23, 372),
+            Location = new Point(23, 388),
             Size = new Size(96, 30),
         };
 
@@ -125,10 +125,10 @@ internal sealed class SettingsForm : Form
 
         var footer = new Label
         {
-            Text = "M0 · no capture hooking, no injection, no focus stealing",
+            Text = "No capture hooking, no injection, no focus stealing",
             ForeColor = SystemColors.GrayText,
             AutoSize = true,
-            Location = new Point(23, 414),
+            Location = new Point(23, 432),
         };
 
         Controls.AddRange([title, subtitle, _hotkey, hotkeyHint, controls, _status, snapshots, _folder, changeFolder, openFolder, drawButton, logButton, footer]);
