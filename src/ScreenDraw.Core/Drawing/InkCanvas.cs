@@ -17,7 +17,7 @@ public sealed class InkCanvas
 
     public Color Color { get; set; } = Palette.Default;
 
-    public bool Eraser { get; set; }
+    public InkTool Tool { get; set; } = InkTool.Pen;
 
     public float Width
     {
@@ -27,7 +27,7 @@ public sealed class InkCanvas
 
     public void BeginStroke(PointF point)
     {
-        Active = new Stroke(Color, Width, Eraser);
+        Active = new Stroke(Color, Width, Tool);
         Active.Points.Add(point);
     }
 
@@ -86,34 +86,27 @@ public sealed class InkCanvas
         Version++;
     }
 
-    public void CycleColor()
-    {
-        var index = Array.IndexOf(Palette.Colors, Color);
-        Color = Palette.Colors[(index + 1) % Palette.Colors.Length];
-        Eraser = false;
-    }
+    public void SetColor(int index) => Color = Palette.Colors[Math.Clamp(index, 0, Palette.Colors.Length - 1)];
 
-    public void SetColor(int index)
-    {
-        Color = Palette.Colors[Math.Clamp(index, 0, Palette.Colors.Length - 1)];
-        Eraser = false;
-    }
+    public void UsePen() => Tool = InkTool.Pen;
 
-    public void ToggleEraser() => Eraser = !Eraser;
+    public void ToggleEraser() => Tool = Tool == InkTool.Eraser ? InkTool.Pen : InkTool.Eraser;
 
-    public void UsePen() => Eraser = false;
+    public void ToggleHighlighter() => Tool = Tool == InkTool.Highlighter ? InkTool.Pen : InkTool.Highlighter;
 
     public void AdjustWidth(float delta) => Width += delta;
 
     public string Describe()
     {
-        if (Eraser)
+        if (Tool == InkTool.Eraser)
         {
             return $"eraser · {Width:0} px";
         }
 
         var index = Array.IndexOf(Palette.Colors, Color);
         var name = index >= 0 ? Palette.Names[index] : Color.Name.ToLowerInvariant();
-        return $"{name} · {Width:0} px";
+        return Tool == InkTool.Highlighter
+            ? $"highlighter · {name} · {Width:0} px"
+            : $"{name} · {Width:0} px";
     }
 }

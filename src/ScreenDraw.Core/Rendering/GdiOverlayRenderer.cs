@@ -14,6 +14,8 @@ public sealed class GdiOverlayRenderer : IOverlayRenderer
     // Transparent pixels of a layered window are click-through, so the frame keeps an alpha floor of 1.
     private const byte HitTestAlpha = 1;
 
+    private const int HighlighterAlpha = 96;
+
     private const float MinimumRingDiameter = 8f;
 
     private static readonly Font HudFont = new("Segoe UI", 9f, FontStyle.Regular, GraphicsUnit.Point);
@@ -202,20 +204,35 @@ public sealed class GdiOverlayRenderer : IOverlayRenderer
 
         var diameter = Math.Max(hud.BrushWidth, MinimumRingDiameter);
         var radius = diameter / 2f;
-        var color = hud.BrushColor ?? Color.White;
+        var colour = hud.BrushColor ?? Color.White;
+        var luminance = (0.299 * colour.R) + (0.587 * colour.G) + (0.114 * colour.B);
+        var haloColour = luminance < 110 ? Color.FromArgb(170, 255, 255, 255) : Color.FromArgb(150, 0, 0, 0);
+
         var left = center.X - radius;
         var top = center.Y - radius;
 
         graphics.SmoothingMode = SmoothingMode.AntiAlias;
 
-        using var halo = new Pen(Color.FromArgb(150, 0, 0, 0), 2.5f);
-        using var ring = new Pen(color, 1.4f) { DashStyle = hud.Eraser ? DashStyle.Dash : DashStyle.Solid };
-        graphics.DrawEllipse(halo, left, top, diameter, diameter);
-        graphics.DrawEllipse(ring, left, top, diameter, diameter);
-
-        if (!hud.Eraser)
+        using var halo = new Pen(haloColour, 2.5f);
+        using var ring = new Pen(colour, 1.4f)
         {
-            using var dot = new SolidBrush(color);
+            DashStyle = hud.Tool == InkTool.Eraser ? DashStyle.Dash : DashStyle.Solid,
+        };
+
+        if (hud.Tool == InkTool.Highlighter)
+        {
+            graphics.DrawRectangle(halo, left, top, diameter, diameter);
+            graphics.DrawRectangle(ring, left, top, diameter, diameter);
+        }
+        else
+        {
+            graphics.DrawEllipse(halo, left, top, diameter, diameter);
+            graphics.DrawEllipse(ring, left, top, diameter, diameter);
+        }
+
+        if (hud.Tool != InkTool.Eraser)
+        {
+            using var dot = new SolidBrush(colour);
             graphics.FillEllipse(dot, center.X - 1f, center.Y - 1f, 2f, 2f);
         }
     }
@@ -242,35 +259,63 @@ public sealed class GdiOverlayRenderer : IOverlayRenderer
         graphics.SmoothingMode = SmoothingMode.AntiAlias;
         var points = stroke.Points.ToArray();
 
-        if (stroke.IsEraser)
+        switch (stroke.Tool)
         {
-            graphics.CompositingMode = CompositingMode.SourceCopy;
-            using var eraser = new Pen(Color.FromArgb(HitTestAlpha, 0, 0, 0), stroke.Width + HaloPadding);
-            ConfigureInk(eraser);
-            DrawSegments(graphics, eraser, points);
-            graphics.CompositingMode = CompositingMode.SourceOver;
-            return;
-        }
+            case InkTool.Eraser:
+                graphics.CompositingMode = CompositingMode.SourceCopy;
+                using (var eraser = new Pen(Color.FromArgb(HitTestAlpha, 0, 0, 0), stroke.Width + HaloPadding))
+                {
+                    ConfigureInk(eraser);
+                    DrawSegments(graphics, eraser, points, square: false);
+                }
 
-        graphics.CompositingMode = CompositingMode.SourceOver;
-        using (var halo = new Pen(Color.FromArgb(90, 0, 0, 0), stroke.Width + HaloPadding))
-        {
-            ConfigureInk(halo);
-            DrawSegments(graphics, halo, points);
-        }
+                graphics.CompositingMode = CompositingMode.SourceOver;
+                return;
 
-        using var ink = new Pen(stroke.Color, stroke.Width);
-        ConfigureInk(ink);
-        DrawSegments(graphics, ink, points);
+            case InkTool.Highlighter:
+                graphics.CompositingMode = CompositingMode.SourceOver;
+                using (var marker = new Pen(Color.FromArgb(HighlighterAlpha, stroke.Color), stroke.Width))
+                {
+                    marker.StartCap = LineCap.Square;
+                    marker.EndCap = LineCap.Square;
+                    marker.LineJoin = LineJoin.Miter;
+                    DrawSegments(graphics, marker, points, square: true);
+                }
+
+                return;
+
+            default:
+            {
+                graphics.CompositingMode = CompositingMode.SourceOver;
+                using (var halo = new Pen(Color.FromArgb(90, 0, 0, 0), stroke.Width + HaloPadding))
+                {
+                    ConfigureInk(halo);
+                    DrawSegments(graphics, halo, points, square: false);
+                }
+
+                using var ink = new Pen(stroke.Color, stroke.Width);
+                ConfigureInk(ink);
+                DrawSegments(graphics, ink, points, square: false);
+                return;
+            }
+        }
     }
 
-    private static void DrawSegments(Graphics graphics, Pen pen, PointF[] points)
+    private static void DrawSegments(Graphics graphics, Pen pen, PointF[] points, bool square)
     {
         if (points.Length == 1)
         {
             var radius = pen.Width / 2f;
             using var brush = new SolidBrush(pen.Color);
-            graphics.FillEllipse(brush, points[0].X - radius, points[0].Y - radius, pen.Width, pen.Width);
+            if (square)
+            {
+                graphics.FillRectangle(brush, points[0].X - radius, points[0].Y - radius, pen.Width, pen.Width);
+            }
+            else
+            {
+                graphics.FillEllipse(brush, points[0].X - radius, points[0].Y - radius, pen.Width, pen.Width);
+            }
+
             return;
         }
 

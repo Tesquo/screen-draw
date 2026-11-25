@@ -7,7 +7,7 @@ namespace ScreenDraw.Core.Overlay;
 public sealed class OverlayController : IDisposable
 {
     private static readonly VirtualKey[] ColorKeys =
-        [VirtualKey.D1, VirtualKey.D2, VirtualKey.D3, VirtualKey.D4, VirtualKey.D5];
+        [VirtualKey.D1, VirtualKey.D2, VirtualKey.D3, VirtualKey.D4, VirtualKey.D5, VirtualKey.D6];
 
     private const long HoldDelay = 350;
 
@@ -162,6 +162,12 @@ public sealed class OverlayController : IDisposable
             Canvas.ToggleEraser();
             Announce();
         }, "E");
+
+        RegisterSessionHotkey(VirtualKey.H, () =>
+        {
+            Canvas.ToggleHighlighter();
+            Announce();
+        }, "H");
 
         RegisterSessionHotkey(VirtualKey.B, () =>
         {

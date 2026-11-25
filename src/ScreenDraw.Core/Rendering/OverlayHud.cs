@@ -1,3 +1,5 @@
+using ScreenDraw.Core.Drawing;
+
 namespace ScreenDraw.Core.Rendering;
 
 public readonly record struct OverlayHud(
@@ -6,7 +8,7 @@ public readonly record struct OverlayHud(
     PointF? Cursor = null,
     float BrushWidth = 0f,
     Color? BrushColor = null,
-    bool Eraser = false)
+    InkTool Tool = InkTool.Pen)
 {
     public static OverlayHud None => default;
 }

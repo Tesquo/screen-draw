@@ -237,7 +237,7 @@ public sealed class OverlayWindow : NativeWindowBase
                 Cursor: chrome ? _cursor : null,
                 BrushWidth: _canvas.Width,
                 BrushColor: _canvas.Color,
-                Eraser: _canvas.Eraser));
+                Tool: _canvas.Tool));
         _renderer.Present();
     }
 

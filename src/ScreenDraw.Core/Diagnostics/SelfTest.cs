@@ -64,11 +64,14 @@ public static class SelfTest
         Check("tools describe themselves", () =>
         {
             canvas.SetColor(1);
-            var colored = canvas.Describe() == "red · 4 px";
+            var coloured = canvas.Describe() == "yellow · 4 px";
             canvas.ToggleEraser();
             var erasing = canvas.Describe() == "eraser · 4 px";
             canvas.UsePen();
-            return colored && erasing && !canvas.Eraser;
+            canvas.ToggleHighlighter();
+            var highlighting = canvas.Describe() == "highlighter · yellow · 4 px";
+            canvas.UsePen();
+            return coloured && erasing && highlighting && canvas.Tool == InkTool.Pen;
         });
 
         if (SyntheticInput.KeyDown((ushort)VirtualKey.OemCloseBrackets) == 0)
@@ -112,6 +115,14 @@ public static class SelfTest
 
                 window.Renderer.Render(canvas, new OverlayHud(Cursor: new PointF(120f, 140f), BrushWidth: 40f));
                 Check("brush ring follows the brush size", () => frame.GetPixel(120, 121).A > 0);
+
+                var marker = new InkCanvas { Tool = InkTool.Highlighter, Width = 28f };
+                marker.BeginStroke(new PointF(200f, 60f));
+                marker.ExtendStroke(new PointF(300f, 60f));
+                marker.EndStroke();
+                window.Renderer.Render(marker, OverlayHud.None);
+                var markerAlpha = frame.GetPixel(250, 60).A;
+                Check("highlighter stays translucent", () => markerAlpha > 40 && markerAlpha < 250);
 
                 var preview = Path.Combine(Path.GetTempPath(), "screendraw-selftest.png");
                 frame.Save(preview, ImageFormat.Png);
