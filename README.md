@@ -12,7 +12,7 @@ Download the latest build from [Releases](https://github.com/Tesquo/screen-draw/
 
 ## Status
 
-Early. `0.2.x` contains the overlay, painting, toolbar keys and snapshots, packaged as a self contained folder. TODO includes a configurable arm hotkey, window tracking while the overlay is armed, and per-window captures, and other features like text boxes, highlighting etc.
+Early. `0.3.x` contains the overlay, painting, highlighter/eraser tools, toolbar keys and snapshots, packaged as a self contained folder.
 
 ## Limitations
 
@@ -94,13 +94,6 @@ Everything meaningful is logged to `%LOCALAPPDATA%\ScreenDraw\screen-draw.log`, 
 - Global hotkeys go through `RegisterHotKey` on a message-only window. Everything the overlay needs — `Esc`, the tool keys, `Space` — is registered on arm and released on dismiss, so nothing is stolen outside drawing mode.
 - A snapshot re-renders the frame with its chrome suppressed, waits for DWM to compose it, then copies the region with `BitBlt` and `CAPTUREBLT`, which includes layered windows. The ink lands in the picture; the border, label and ring do not.
 - There is no hooking, no injection and no process interaction of any kind. This is due to not wanting to interfere with anti-cheats or other programs that might have issues with an overlay like this.
-
-## Roadmap
-
-- **M1** Keyboard tool palette (colours, eraser, width), Direct2D + DirectComposition renderer, configurable hotkeys, window tracking while the overlay is armed.
-- **M2** `Windows.Graphics.Capture` for per-window grabs that ignore occluding windows, and a configurable save folder.
-- **M3** Persisted settings, per-monitor handling, note fade.
-- **M4** Freeze-the-frame toggle, spotlight and zoom.
 
 ## Antivirus and trust
 
