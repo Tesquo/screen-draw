@@ -124,6 +124,25 @@ public static class SelfTest
                 var markerAlpha = frame.GetPixel(250, 60).A;
                 Check("highlighter stays translucent", () => markerAlpha > 40 && markerAlpha < 250);
 
+                window.Renderer.Render(
+                    canvas,
+                    new OverlayHud(Cursor: new PointF(160f, 150f), BrushWidth: 24f, BrushColor: Palette.Black));
+
+                var lightHalo = 0;
+                for (var y = 132; y <= 168; y++)
+                {
+                    for (var x = 142; x <= 178; x++)
+                    {
+                        var pixel = frame.GetPixel(x, y);
+                        if (pixel.A > 40 && pixel.R > 150 && pixel.G > 150 && pixel.B > 150)
+                        {
+                            lightHalo++;
+                        }
+                    }
+                }
+
+                Check("ring halo stays light for dark ink", () => lightHalo > 0);
+
                 var preview = Path.Combine(Path.GetTempPath(), "screendraw-selftest.png");
                 frame.Save(preview, ImageFormat.Png);
                 log.WriteLine($"      preview: {preview}");
