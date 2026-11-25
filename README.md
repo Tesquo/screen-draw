@@ -27,9 +27,10 @@ Early. `0.3.x` contains the overlay, painting, highlighter/eraser tools, toolbar
 | `Ctrl + Alt + D` | Arm the overlay over the focused window, or disarm it |
 | Left drag | Ink |
 | Mouse wheel | Brush size |
-| `1`–`5` | Yellow, red, cyan, green, white |
-| `E` / `B` | Eraser / pen |
-| `[` / `]` | Thinner / wider brush — hold to keep going |
+| `1`–`6` | Black, Yellow, White, Red, Cyan, Green |
+| `E` | Eraser / pen (Toggle)|
+| `H` | Highlighter (Toggle)|
+| `[` / `]` | Brush size (keyboard shortcut, press and hold) |
 | Middle click | Undo |
 | Right click | Clear |
 | `Space` | Snapshot: save a PNG and copy it to the clipboard |
@@ -50,7 +51,7 @@ If `Ctrl + Alt + D` is already taken by another application, Screen Draw falls b
 
 This is designed in a way so that you can step through stages of annotation, without losing the canvas.
 
-It is a copy of the screen region rather than of the window, so anything sitting on top of the window at that moment is in the picture. A per-window grab that ignores occluding windows is M2.
+It is a copy of the screen region rather than of the window, so anything sitting on top of the window at that moment is in the picture.
 
 ## Requirements
 
